@@ -33,6 +33,21 @@ class AVFormatBase {
   AVFormatContext* ctx_ = nullptr;
 };
 
+class AVIFormat : public AVFormatBase {
+ public:
+  AVIFormat();
+
+  AVIFormat(const char* url);
+
+  virtual ~AVIFormat();
+
+  void open(const char* url);
+
+  void close();
+
+  int read_frame(AVPacket* pkt);
+};
+
 class AVOFormat : public AVFormatBase {
  public:
   AVOFormat();

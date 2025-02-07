@@ -12,6 +12,49 @@
 
 using namespace av::ffmpeg;
 
+AVIFormat::AVIFormat() { }
+
+AVIFormat::AVIFormat(const char* url) {
+  open(url);
+}
+
+AVIFormat::~AVIFormat() {
+  close();
+}
+
+void AVIFormat::open(const char* url) {
+  char err_msg[AV_ERROR_MAX_STRING_SIZE];
+  int rc;
+
+  assert(!ctx_);
+
+  rc = avformat_open_input(&ctx_, url, nullptr, nullptr);
+  if (rc < 0) {
+    goto err_exit;
+  }
+
+  rc = avformat_find_stream_info(ctx_, nullptr);
+  if (rc < 0) {
+    goto err_exit;
+  }
+
+  return;
+
+err_exit:
+  av_strerror(rc, err_msg, sizeof(err_msg));
+  close();
+  throw std::runtime_error(err_msg);
+}
+
+void AVIFormat::close() {
+  avformat_close_input(&ctx_);
+}
+
+int AVIFormat::read_frame(AVPacket* pkt) {
+  assert(ctx_);
+  return av_read_frame(ctx_, pkt);
+}
+
 AVOFormat::AVOFormat() { }
 
 AVOFormat::AVOFormat(const char* url, const char* format) {
@@ -28,7 +71,7 @@ void AVOFormat::open(const char* url, const char* format) {
 
   assert(!ctx_);
 
-  rc = avformat_alloc_output_context2(&ctx_, NULL, format, url);
+  rc = avformat_alloc_output_context2(&ctx_, nullptr, format, url);
   if (rc < 0) {
     goto err_exit;
   }

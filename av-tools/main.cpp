@@ -15,39 +15,78 @@ using std::cerr;
 using std::endl;
 
 int main(int argc, char* argv[]) {
+  av::ffmpeg::AVIFormat ifmt;
   av::ffmpeg::AVOFormat ofmt;
 
-  if (argc != 2 && argc != 3) {
-    cerr << "Usage: ./av-tools <url> [fmt]\n";
+  if (argc != 3) {
+    cerr << "Usage: ./av-tools <input.h264> <output.flv>\n";
     exit(EXIT_FAILURE);
   }
 
   try {
-    if (argc > 2) {
-      ofmt.open(argv[1], argv[2]);
-    } else {
-      ofmt.open(argv[1]);
+    AVPacket* pkt = nullptr;
+    AVStream* input_stream = NULL;
+    AVStream* output_stream = NULL;
+    unsigned frame_cnt;
+
+    pkt = av_packet_alloc();
+    if (!pkt) {
+      throw std::runtime_error("Fail to alloc AVPacket");
     }
 
-    AVStream* st = ofmt.new_stream();
-    if (!st) {
-      throw std::runtime_error("Fail to create new stream");
+    // IFormat
+    ifmt.open(argv[1]);
+
+    for (unsigned i = 0; i != ifmt.ctx()->nb_streams; ++i) {
+      AVStream* st = ifmt.ctx()->streams[i];
+      if ((st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) &&
+          (st->codecpar->codec_id == AV_CODEC_ID_H264)) {
+        input_stream = st;
+        break;
+      }
     }
-    st->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-    st->codecpar->codec_id = AV_CODEC_ID_H264;
-    st->codecpar->width = 1280;
-    st->codecpar->height = 720;
-    st->time_base = (AVRational) {1, 1000};
+
+    if (!input_stream) {
+      throw std::runtime_error("No H264 stream found");
+    }
+
+    av_dump_format(ifmt.ctx(), 0, argv[1], 0);
+
+    // OFormat
+    ofmt.open(argv[2]);
+
+    output_stream = ofmt.new_stream();
+    if (!output_stream) {
+      throw std::runtime_error("Fail to add output stream");
+    }
+    output_stream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
+    output_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+    output_stream->codecpar->width = input_stream->codecpar->width;
+    output_stream->codecpar->height = input_stream->codecpar->height;
+    output_stream->time_base = (AVRational) {1, 1000};
 
     if (ofmt.write_header() < 0) {
       throw std::runtime_error("Fail to write header");
     }
 
-    cout << "\nactual timebase for st[" << st->index << "] is "
-         << st->time_base.num << '/' << st->time_base.den
-         << endl;
+    // remux
+    for (frame_cnt = 0; frame_cnt != 10000; ++frame_cnt) {
+      if (ifmt.read_frame(pkt) < 0) {
+        cerr << "Error reading frame\n";
+        break;
+      }
+      pkt->pts = frame_cnt * 50 / 3;
+      pkt->dts = pkt->pts;
+      pkt->duration = 0;
+      if (ofmt.write_frame(pkt) < 0) {
+        cerr << "Error writing frame\n";
+        break;
+      }
+    }
+
+    cout << frame_cnt << " frames written\n";
   } catch (std::exception &e) {
-    cerr << "\nexception caught: " << e.what() << endl;
+    cerr << "exception caught: " << e.what() << endl;
     exit(EXIT_FAILURE);
   }
 
