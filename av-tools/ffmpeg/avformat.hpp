@@ -47,7 +47,7 @@ class AVOFormat : public AVFormatBase {
 
   AVStream* new_stream();
 
-  int write_header(AVDictionary** opts);
+  int write_header(AVDictionary** opts = nullptr);
 
   int write_frame(AVPacket* pkt);
 
