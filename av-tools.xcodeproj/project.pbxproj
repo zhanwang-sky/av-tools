@@ -6,6 +6,17 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D9EAD99B2D55EF9200F9C0C5 /* libavcodec.61.33.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9932D55EF9200F9C0C5 /* libavcodec.61.33.100.dylib */; };
+		D9EAD99C2D55EF9200F9C0C5 /* libswscale.8.13.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9942D55EF9200F9C0C5 /* libswscale.8.13.100.dylib */; };
+		D9EAD99D2D55EF9200F9C0C5 /* libpostproc.58.4.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9952D55EF9200F9C0C5 /* libpostproc.58.4.100.dylib */; };
+		D9EAD99E2D55EF9200F9C0C5 /* libavutil.59.56.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9962D55EF9200F9C0C5 /* libavutil.59.56.100.dylib */; };
+		D9EAD99F2D55EF9200F9C0C5 /* libavdevice.61.4.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9972D55EF9200F9C0C5 /* libavdevice.61.4.100.dylib */; };
+		D9EAD9A02D55EF9200F9C0C5 /* libswresample.5.4.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9982D55EF9200F9C0C5 /* libswresample.5.4.100.dylib */; };
+		D9EAD9A12D55EF9200F9C0C5 /* libavformat.61.9.106.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD9992D55EF9200F9C0C5 /* libavformat.61.9.106.dylib */; };
+		D9EAD9A22D55EF9200F9C0C5 /* libavfilter.10.9.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EAD99A2D55EF9200F9C0C5 /* libavfilter.10.9.100.dylib */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		D9853C852D55ADF800D4BBEA /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -20,6 +31,14 @@
 
 /* Begin PBXFileReference section */
 		D9853C872D55ADF800D4BBEA /* av-tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "av-tools"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9EAD9932D55EF9200F9C0C5 /* libavcodec.61.33.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavcodec.61.33.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libavcodec.61.33.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9942D55EF9200F9C0C5 /* libswscale.8.13.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libswscale.8.13.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libswscale.8.13.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9952D55EF9200F9C0C5 /* libpostproc.58.4.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpostproc.58.4.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libpostproc.58.4.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9962D55EF9200F9C0C5 /* libavutil.59.56.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavutil.59.56.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libavutil.59.56.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9972D55EF9200F9C0C5 /* libavdevice.61.4.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavdevice.61.4.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libavdevice.61.4.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9982D55EF9200F9C0C5 /* libswresample.5.4.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libswresample.5.4.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libswresample.5.4.100.dylib"; sourceTree = "<group>"; };
+		D9EAD9992D55EF9200F9C0C5 /* libavformat.61.9.106.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.61.9.106.dylib; path = "$(HOME)/.local/ffmpeg/lib/libavformat.61.9.106.dylib"; sourceTree = "<group>"; };
+		D9EAD99A2D55EF9200F9C0C5 /* libavfilter.10.9.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavfilter.10.9.100.dylib; path = "$(HOME)/.local/ffmpeg/lib/libavfilter.10.9.100.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -35,6 +54,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D9EAD99B2D55EF9200F9C0C5 /* libavcodec.61.33.100.dylib in Frameworks */,
+				D9EAD99C2D55EF9200F9C0C5 /* libswscale.8.13.100.dylib in Frameworks */,
+				D9EAD99D2D55EF9200F9C0C5 /* libpostproc.58.4.100.dylib in Frameworks */,
+				D9EAD99E2D55EF9200F9C0C5 /* libavutil.59.56.100.dylib in Frameworks */,
+				D9EAD99F2D55EF9200F9C0C5 /* libavdevice.61.4.100.dylib in Frameworks */,
+				D9EAD9A02D55EF9200F9C0C5 /* libswresample.5.4.100.dylib in Frameworks */,
+				D9EAD9A12D55EF9200F9C0C5 /* libavformat.61.9.106.dylib in Frameworks */,
+				D9EAD9A22D55EF9200F9C0C5 /* libavfilter.10.9.100.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -45,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				D9853C892D55ADF800D4BBEA /* av-tools */,
+				D9EAD9922D55EF9200F9C0C5 /* Frameworks */,
 				D9853C882D55ADF800D4BBEA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,6 +83,21 @@
 				D9853C872D55ADF800D4BBEA /* av-tools */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D9EAD9932D55EF9200F9C0C5 /* libavcodec.61.33.100.dylib */,
+				D9EAD9972D55EF9200F9C0C5 /* libavdevice.61.4.100.dylib */,
+				D9EAD99A2D55EF9200F9C0C5 /* libavfilter.10.9.100.dylib */,
+				D9EAD9992D55EF9200F9C0C5 /* libavformat.61.9.106.dylib */,
+				D9EAD9962D55EF9200F9C0C5 /* libavutil.59.56.100.dylib */,
+				D9EAD9952D55EF9200F9C0C5 /* libpostproc.58.4.100.dylib */,
+				D9EAD9982D55EF9200F9C0C5 /* libswresample.5.4.100.dylib */,
+				D9EAD9942D55EF9200F9C0C5 /* libswscale.8.13.100.dylib */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -245,6 +288,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "$(HOME)/.local/ffmpeg/include";
+				LIBRARY_SEARCH_PATHS = "$(HOME)/.local/ffmpeg/lib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -253,6 +298,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "$(HOME)/.local/ffmpeg/include";
+				LIBRARY_SEARCH_PATHS = "$(HOME)/.local/ffmpeg/lib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
