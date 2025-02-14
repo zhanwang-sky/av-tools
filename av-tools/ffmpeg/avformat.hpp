@@ -33,30 +33,38 @@ class AVFormatBase {
   AVFormatContext* ctx_ = nullptr;
 };
 
-class AVIFormat : public AVFormatBase {
+class AVDemuxer : public AVFormatBase {
  public:
-  AVIFormat();
+  AVDemuxer();
 
-  AVIFormat(const char* url);
+  AVDemuxer(const char* url,
+            const AVInputFormat* fmt = nullptr,
+            AVDictionary** opts = nullptr);
 
-  virtual ~AVIFormat();
+  virtual ~AVDemuxer();
 
-  void open(const char* url);
+  void open(const char* url,
+            const AVInputFormat* fmt = nullptr,
+            AVDictionary** opts = nullptr);
 
   void close();
 
   int read_frame(AVPacket* pkt);
 };
 
-class AVOFormat : public AVFormatBase {
+class AVMuxer : public AVFormatBase {
  public:
-  AVOFormat();
+  AVMuxer();
 
-  AVOFormat(const char* url, const char* format = nullptr);
+  AVMuxer(const char* url,
+          const char* fmt_name = nullptr,
+          const AVOutputFormat* fmt = nullptr);
 
-  virtual ~AVOFormat();
+  virtual ~AVMuxer();
 
-  void open(const char* url, const char* format = nullptr);
+  void open(const char* url,
+            const char* fmt_name = nullptr,
+            const AVOutputFormat* fmt = nullptr);
 
   void close();
 
