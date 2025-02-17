@@ -12,12 +12,13 @@
 #include "avformat.hpp"
 #include "transcode.hpp"
 
-#define INPUT_FORMAT_NAME "alaw"
+//#define INPUT_FORMAT_NAME "alaw"
 // options for pcm (defined in libavformat/pcmdec.c)
-#define INPUT_SAMPLE_RATE "8000"
-#define INPUT_CH_LAYOUT "mono"
-#define INPUT_CODEC_ID AV_CODEC_ID_PCM_ALAW
-#define OUTPUT_CODEC_ID AV_CODEC_ID_PCM_S16LE
+//#define INPUT_SAMPLE_RATE "8000"
+//#define INPUT_CH_LAYOUT "mono"
+#define INPUT_CODEC_ID AV_CODEC_ID_H264
+#define OUTPUT_CODEC_ID AV_CODEC_ID_H265
+#define OUTPUT_BITRATE 10485760
 
 using std::cout;
 using std::cerr;
@@ -81,6 +82,10 @@ int transcode(const char* input_file, const char* output_file) {
       throw std::runtime_error("Could not find specified input stream");
     }
 
+    cout << "ist->time_base: "
+         << ist->time_base.num << '/' << ist->time_base.den
+         << endl;
+
     // Decoder
     av::ffmpeg::AVDecoder decoder(ist->codecpar->codec_id);
     AVCodecContext* decode_ctx = decoder.ctx();
@@ -97,7 +102,15 @@ int transcode(const char* input_file, const char* output_file) {
     AVCodecContext* encode_ctx = encoder.ctx();
 
     if (encode_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-      // XXX TODO
+      // average bitrate
+      encode_ctx->bit_rate = OUTPUT_BITRATE;
+      // basic video attributes
+      encode_ctx->time_base = av_inv_q(decode_ctx->framerate);
+      encode_ctx->framerate = decode_ctx->framerate;
+      encode_ctx->width = decode_ctx->width;
+      encode_ctx->height = decode_ctx->height;
+      // not always supported by the encoder
+      encode_ctx->pix_fmt = decode_ctx->pix_fmt;
     } else if (encode_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
       encode_ctx->time_base = (AVRational) {1, decode_ctx->sample_rate};
       encode_ctx->sample_rate = decode_ctx->sample_rate;
@@ -107,6 +120,10 @@ int transcode(const char* input_file, const char* output_file) {
         throw std::runtime_error("Fail to copy ch_layout");
       }
     }
+
+    cout << "encoder->time_base: "
+         << encode_ctx->time_base.num << '/' << encode_ctx->time_base.den
+         << endl;
 
     // Output Muxer
     av::ffmpeg::AVMuxer muxer(output_file);
@@ -127,7 +144,7 @@ int transcode(const char* input_file, const char* output_file) {
     if (avcodec_parameters_from_context(ost->codecpar, encode_ctx) < 0) {
       throw std::runtime_error("Fail to copy codecpar from encoder");
     }
-    ost->time_base = encode_ctx->time_base;
+    ost->time_base = encode_ctx->time_base; // inconclusive
 
     // Output Muxer
     if (muxer.write_header() < 0) {
@@ -135,6 +152,10 @@ int transcode(const char* input_file, const char* output_file) {
     }
 
     av_dump_format(mux_ctx, 0, output_file, 1);
+
+    cout << "ost->time_base: "
+         << ost->time_base.num << '/' << ost->time_base.den
+         << endl;
 
     // Transcode
     // packet -> frames[]
@@ -149,9 +170,10 @@ int transcode(const char* input_file, const char* output_file) {
       ++pkt_decoded;
     };
 
-    auto on_output_pkt = [&pkt_encoded, ost](AVPacket* pkt) {
+    auto on_output_pkt = [&pkt_encoded, ist, ost](AVPacket* pkt) {
       ++pkt_encoded;
       pkt->stream_index = ost->index;
+      av_packet_rescale_ts(pkt, ist->time_base, ost->time_base);
     };
 
     // wrappers
@@ -181,8 +203,7 @@ int transcode(const char* input_file, const char* output_file) {
       rc = decoder.send_packet(pkt);
 
       while (rc >= 0) {
-        rc = decoder.receive_frame(frame);
-        if (rc < 0) {
+        if ((rc = decoder.receive_frame(frame)) < 0) {
           if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
             rc = 0;
           }
