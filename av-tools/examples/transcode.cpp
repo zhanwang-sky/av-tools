@@ -25,31 +25,31 @@ using std::cerr;
 using std::endl;
 
 int transcode(const char* input_file, const char* output_file) {
-  const AVInputFormat* ifmt = nullptr;
-  AVDictionary* opts = nullptr;
+  const AVInputFormat* input_fmt = nullptr;
+  AVDictionary* input_opts = nullptr;
   AVPacket* input_pkt = nullptr;
   AVPacket* output_pkt = nullptr;
   AVFrame* frame = nullptr;
   int ret = 0;
 
 #ifdef INPUT_FORMAT_NAME
-  ifmt = av_find_input_format(INPUT_FORMAT_NAME);
-  if (!ifmt) {
+  input_fmt = av_find_input_format(INPUT_FORMAT_NAME);
+  if (!input_fmt) {
     cerr << "Could not find input format '" << INPUT_FORMAT_NAME << "'\n";
     ret = -1;
     goto exit;
   }
 #endif
 
-  if (opts
+  if (input_opts
 #ifdef INPUT_SAMPLE_RATE
-      || (av_dict_set(&opts, "sample_rate", INPUT_SAMPLE_RATE, 0) < 0)
+      || (av_dict_set(&input_opts, "sample_rate", INPUT_SAMPLE_RATE, 0) < 0)
 #endif
 #ifdef INPUT_CH_LAYOUT
-      || (av_dict_set(&opts, "ch_layout", INPUT_CH_LAYOUT, 0) < 0)
+      || (av_dict_set(&input_opts, "ch_layout", INPUT_CH_LAYOUT, 0) < 0)
 #endif
       ) {
-    cerr << "Fail to set format options for input file\n";
+    cerr << "Fail to set input options\n";
     ret = -1;
     goto exit;
   }
@@ -65,7 +65,7 @@ int transcode(const char* input_file, const char* output_file) {
 
   try {
     // Input Demuxer
-    av::ffmpeg::AVDemuxer demuxer(input_file, ifmt, &opts);
+    av::ffmpeg::AVDemuxer demuxer(input_file, input_fmt, &input_opts);
     AVFormatContext* demux_ctx = demuxer.ctx();
     AVStream* ist = nullptr;
 
@@ -102,8 +102,10 @@ int transcode(const char* input_file, const char* output_file) {
     AVCodecContext* encode_ctx = encoder.ctx();
 
     if (encode_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+#ifdef OUTPUT_BITRATE
       // average bitrate
       encode_ctx->bit_rate = OUTPUT_BITRATE;
+#endif
       // basic video attributes
       encode_ctx->time_base = av_inv_q(decode_ctx->framerate);
       encode_ctx->framerate = decode_ctx->framerate;
@@ -112,7 +114,7 @@ int transcode(const char* input_file, const char* output_file) {
       // not always supported by the encoder
       encode_ctx->pix_fmt = decode_ctx->pix_fmt;
     } else if (encode_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-      encode_ctx->time_base = (AVRational) {1, decode_ctx->sample_rate};
+      encode_ctx->time_base = av_make_q(1, decode_ctx->sample_rate);
       encode_ctx->sample_rate = decode_ctx->sample_rate;
       encode_ctx->sample_fmt = decode_ctx->sample_fmt;
       if (av_channel_layout_copy(&encode_ctx->ch_layout,
@@ -146,7 +148,6 @@ int transcode(const char* input_file, const char* output_file) {
     }
     ost->time_base = encode_ctx->time_base; // inconclusive
 
-    // Output Muxer
     if (muxer.write_header() < 0) {
       throw std::runtime_error("Fail to write header");
     }
@@ -162,29 +163,34 @@ int transcode(const char* input_file, const char* output_file) {
     // frame -> packets[]
 
     // stats
-    unsigned pkt_decoded = 0;
-    unsigned pkt_encoded = 0;
+    unsigned input_pkt_cnt = 0;
+    unsigned output_pkt_cnt = 0;
+    unsigned frame_cnt = 0;
 
-    // packet manipulators
-    auto on_input_pkt = [&pkt_decoded](AVPacket* pkt) {
-      ++pkt_decoded;
+    // manipulators
+    auto on_input_pkt = [&input_pkt_cnt](AVPacket* pkt) {
+      ++input_pkt_cnt;
     };
 
-    auto on_output_pkt = [&pkt_encoded, ist, ost](AVPacket* pkt) {
-      ++pkt_encoded;
+    auto on_output_pkt = [&output_pkt_cnt, ist, ost](AVPacket* pkt) {
+      ++output_pkt_cnt;
       pkt->stream_index = ost->index;
       av_packet_rescale_ts(pkt, ist->time_base, ost->time_base);
     };
 
+    auto on_frame = [&frame_cnt](AVFrame* frame) {
+      ++frame_cnt;
+      cout << "frame[" << frame_cnt << "] pts=" << frame->pts << endl;
+    };
+
     // wrappers
-    auto frame2packets = [&encoder, &muxer, &output_pkt, &on_output_pkt](AVFrame* frame) -> int {
-      int rc;
-
-      rc = encoder.send_frame(frame);
-
+    auto frame2packets = [&encoder, &muxer, &on_output_pkt, output_pkt](AVFrame* frame) -> int {
+      int rc = encoder.send_frame(frame);
+      if (frame) {
+        av_frame_unref(frame);
+      }
       while (rc >= 0) {
-        rc = encoder.receive_packet(output_pkt);
-        if (rc < 0) {
+        if ((rc = encoder.receive_packet(output_pkt) < 0)) {
           if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
             rc = 0;
           }
@@ -193,15 +199,14 @@ int transcode(const char* input_file, const char* output_file) {
         on_output_pkt(output_pkt);
         rc = muxer.interleaved_write_frame(output_pkt);
       }
-
       return rc;
     };
 
-    auto packet2frames = [&decoder, &frame, &frame2packets](AVPacket* pkt) -> int {
-      int rc;
-
-      rc = decoder.send_packet(pkt);
-
+    auto packet2frames = [&decoder, &frame2packets, &on_frame, frame](AVPacket* pkt) -> int {
+      int rc = decoder.send_packet(pkt);
+      if (pkt) {
+        av_packet_unref(pkt);
+      }
       while (rc >= 0) {
         if ((rc = decoder.receive_frame(frame)) < 0) {
           if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
@@ -209,26 +214,35 @@ int transcode(const char* input_file, const char* output_file) {
           }
           break;
         }
+        on_frame(frame);
         rc = frame2packets(frame);
       }
+      return rc;
+    };
 
+    auto transcode_pkts = [&demuxer, &packet2frames, &on_input_pkt, input_pkt](int stream_index) -> int {
+      int rc;
+      for (;;) {
+        if ((rc = demuxer.read_frame(input_pkt)) < 0) {
+          break;
+        }
+        if ((stream_index >= 0) && (input_pkt->stream_index != stream_index)) {
+          av_packet_unref(input_pkt);
+          continue;
+        }
+        on_input_pkt(input_pkt);
+        if ((rc = packet2frames(input_pkt)) < 0) {
+          break;
+        }
+      }
       return rc;
     };
 
     // do transcode
-    int rc;
-
-    for (;;) {
-      if ((rc = demuxer.read_frame(input_pkt)) < 0) {
-        break;
-      }
-      on_input_pkt(input_pkt);
-      if ((rc = packet2frames(input_pkt)) < 0) {
-        break;
-      }
-    }
+    int rc = transcode_pkts(ist->index);
 
     if (rc == AVERROR_EOF) {
+      // flush
       packet2frames(nullptr);
       frame2packets(nullptr);
     } else if (rc < 0) {
@@ -238,7 +252,10 @@ int transcode(const char* input_file, const char* output_file) {
     }
 
     // print stats
-    cout << pkt_decoded << " packets decoded, " << pkt_encoded << " packets encoded\n";
+    cout << "input_pkts=" << input_pkt_cnt
+         << ", output_pkts=" << output_pkt_cnt
+         << ", frames=" << frame_cnt
+         << endl;
 
   } catch (const std::exception& e) {
     cerr << "Exception caught: " << e.what() << endl;
@@ -249,6 +266,6 @@ exit:
   av_frame_free(&frame);
   av_packet_free(&output_pkt);
   av_packet_free(&input_pkt);
-  av_dict_free(&opts);
+  av_dict_free(&input_opts);
   return ret;
 }
