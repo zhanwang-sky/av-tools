@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "transcode.hpp"
+#include "remux.hpp"
 
 using std::cout;
 using std::cerr;
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  transcode(argv[1], argv[2]);
+  remux(argv[1], argv[2]);
 
   return 0;
 }
