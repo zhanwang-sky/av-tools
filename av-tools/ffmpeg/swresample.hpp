@@ -35,7 +35,7 @@ class Resampler {
                AVAudioFifo* af);
 
  protected:
-  virtual inline void clean();
+  virtual void clean();
 
  private:
   AVChannelLayout in_ch_layout_;

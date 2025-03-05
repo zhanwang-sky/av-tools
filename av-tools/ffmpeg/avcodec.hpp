@@ -8,9 +8,6 @@
 #ifndef avcodec_hpp
 #define avcodec_hpp
 
-#include <cassert>
-#include <stdexcept>
-
 extern "C" {
 #include <libavcodec/avcodec.h>
 }
@@ -19,111 +16,57 @@ namespace av {
 
 namespace ffmpeg {
 
-class AVCodecBase {
+class CodecBase {
  public:
-  AVCodecBase(const AVCodecBase&) = delete;
-  AVCodecBase& operator=(const AVCodecBase&) = delete;
+  CodecBase(const CodecBase&) = delete;
+  CodecBase& operator=(const CodecBase&) = delete;
 
-  const AVCodec* codec() const {
-    return codec_;
-  }
+  CodecBase(CodecBase&& rhs) noexcept;
 
-  AVCodecContext* ctx() const {
-    return ctx_;
-  }
+  CodecBase& operator=(CodecBase&& rhs) noexcept;
 
-  void open(AVDictionary** opts = nullptr) {
-    char err_msg[AV_ERROR_MAX_STRING_SIZE];
-    int rc;
+  virtual ~CodecBase();
 
-    assert(!is_open_);
+  void open(AVDictionary** opts = nullptr);
 
-    rc = avcodec_open2(ctx_, codec_, opts);
-    if (rc < 0) {
-      av_strerror(rc, err_msg, sizeof(err_msg));
-      throw std::runtime_error(err_msg);
-    }
+  inline const AVCodec* codec() const { return codec_; }
 
-    is_open_ = true;
-  }
+  inline AVCodecContext* ctx() { return ctx_; }
 
  protected:
-  AVCodecBase(const AVCodec* codec) {
-    const char* err_msg;
+  explicit CodecBase(const AVCodec* codec);
 
-    if (!(codec_ = codec)) {
-      err_msg = "Codec not found";
-      goto err_exit;
-    }
+  virtual void clean();
 
-    if (!(ctx_ = avcodec_alloc_context3(codec_))) {
-      err_msg = "Cannot allocate memory";
-      goto err_exit;
-    }
-
-    return;
-
-  err_exit:
-    on_destruct();
-    throw std::runtime_error(err_msg);
-  }
-
-  virtual ~AVCodecBase() {
-    on_destruct();
-  }
-
-  bool is_open_ = false;
   const AVCodec* codec_ = nullptr;
   AVCodecContext* ctx_ = nullptr;
-
- private:
-  inline void on_destruct() {
-    avcodec_free_context(&ctx_);
-    codec_ = nullptr;
-    is_open_ = false;
-  }
+  bool is_open_ = false;
 };
 
-class AVDecoder : public AVCodecBase {
+class Decoder : public CodecBase {
  public:
-  AVDecoder(enum AVCodecID codec_id)
-      : AVCodecBase(avcodec_find_decoder(codec_id)) { }
+  Decoder(enum AVCodecID codec_id);
 
-  AVDecoder(const char* codec_name)
-      : AVCodecBase(avcodec_find_decoder_by_name(codec_name)) { }
+  Decoder(const char* codec_name);
 
-  virtual ~AVDecoder() { }
+  virtual ~Decoder();
 
-  int send_packet(const AVPacket* pkt) {
-    assert(is_open_);
-    return avcodec_send_packet(ctx_, pkt);
-  }
+  int send_packet(const AVPacket* pkt);
 
-  int receive_frame(AVFrame* frame) {
-    assert(is_open_);
-    return avcodec_receive_frame(ctx_, frame);
-  }
+  int receive_frame(AVFrame* frame);
 };
 
-class AVEncoder : public AVCodecBase {
+class Encoder : public CodecBase {
  public:
-  AVEncoder(enum AVCodecID codec_id)
-      : AVCodecBase(avcodec_find_encoder(codec_id)) { }
+  Encoder(enum AVCodecID codec_id);
 
-  AVEncoder(const char* codec_name)
-      : AVCodecBase(avcodec_find_encoder_by_name(codec_name)) { }
+  Encoder(const char* codec_name);
 
-  virtual ~AVEncoder() { }
+  virtual ~Encoder();
 
-  int send_frame(const AVFrame* frame) {
-    assert(is_open_);
-    return avcodec_send_frame(ctx_, frame);
-  }
+  int send_frame(const AVFrame* frame);
 
-  int receive_packet(AVPacket* pkt) {
-    assert(is_open_);
-    return avcodec_receive_packet(ctx_, pkt);
-  }
+  int receive_packet(AVPacket* pkt);
 };
 
 } // ffmpeg

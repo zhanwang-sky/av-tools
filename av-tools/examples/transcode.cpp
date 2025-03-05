@@ -87,7 +87,7 @@ int transcode(const char* input_file, const char* output_file) {
          << endl;
 
     // Decoder
-    av::ffmpeg::AVDecoder decoder(ist->codecpar->codec_id);
+    av::ffmpeg::Decoder decoder(ist->codecpar->codec_id);
     AVCodecContext* decode_ctx = decoder.ctx();
 
     if (avcodec_parameters_to_context(decode_ctx, ist->codecpar) < 0) {
@@ -98,7 +98,7 @@ int transcode(const char* input_file, const char* output_file) {
     decoder.open();
 
     // Encoder
-    av::ffmpeg::AVEncoder encoder(OUTPUT_CODEC_ID);
+    av::ffmpeg::Encoder encoder(OUTPUT_CODEC_ID);
     AVCodecContext* encode_ctx = encoder.ctx();
 
     if (encode_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
