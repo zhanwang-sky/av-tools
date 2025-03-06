@@ -58,7 +58,7 @@ int remux(const char* input_file, const char* output_file) {
 
   try {
     // Input Demuxer
-    av::ffmpeg::AVDemuxer demuxer(input_file, input_fmt, &input_opts);
+    av::ffmpeg::Demuxer demuxer(input_file, input_fmt, &input_opts);
     AVFormatContext* demux_ctx = demuxer.ctx();
     AVStream* ist = nullptr;
 
@@ -76,7 +76,7 @@ int remux(const char* input_file, const char* output_file) {
     }
 
     // Output Muxer
-    av::ffmpeg::AVMuxer muxer(output_file);
+    av::ffmpeg::Muxer muxer(output_file);
     AVFormatContext* mux_ctx = muxer.ctx();
     AVStream* ost = nullptr;
 

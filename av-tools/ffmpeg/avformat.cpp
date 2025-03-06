@@ -5,32 +5,17 @@
 //  Created by zhanwang-sky on 2025/2/7.
 //
 
-#include <cassert>
 #include <stdexcept>
 
 #include "avformat.hpp"
 
 using namespace av::ffmpeg;
 
-AVDemuxer::AVDemuxer() { }
-
-AVDemuxer::AVDemuxer(const char* url,
-                     const AVInputFormat* fmt,
-                     AVDictionary** opts) {
-  open(url, fmt, opts);
-}
-
-AVDemuxer::~AVDemuxer() {
-  close();
-}
-
-void AVDemuxer::open(const char* url,
-                     const AVInputFormat* fmt,
-                     AVDictionary** opts) {
-  char err_msg[AV_ERROR_MAX_STRING_SIZE];
+Demuxer::Demuxer(const char* url,
+                 const AVInputFormat* fmt,
+                 AVDictionary** opts) {
   int rc;
-
-  assert(!ctx_);
+  char err_msg[AV_ERROR_MAX_STRING_SIZE];
 
   rc = avformat_open_input(&ctx_, url, fmt, opts);
   if (rc < 0) {
@@ -46,38 +31,41 @@ void AVDemuxer::open(const char* url,
 
 err_exit:
   av_strerror(rc, err_msg, sizeof(err_msg));
-  close();
+  clear();
   throw std::runtime_error(err_msg);
 }
 
-void AVDemuxer::close() {
-  avformat_close_input(&ctx_);
+Demuxer::Demuxer(Demuxer&& rhs) noexcept
+    : ctx_(rhs.ctx_) {
+  rhs.ctx_ = nullptr;
 }
 
-int AVDemuxer::read_frame(AVPacket* pkt) {
-  assert(ctx_);
+Demuxer& Demuxer::operator=(Demuxer &&rhs) noexcept {
+  if (this != &rhs) {
+    clear();
+    ctx_ = rhs.ctx_;
+    rhs.ctx_ = nullptr;
+  }
+  return *this;
+}
+
+Demuxer::~Demuxer() {
+  clear();
+}
+
+int Demuxer::read_frame(AVPacket* pkt) {
   return av_read_frame(ctx_, pkt);
 }
 
-AVMuxer::AVMuxer() { }
-
-AVMuxer::AVMuxer(const char* url,
-                 const char* fmt_name,
-                 const AVOutputFormat* fmt) {
-  open(url, fmt_name, fmt);
+void Demuxer::clear() {
+  avformat_close_input(&ctx_);
 }
 
-AVMuxer::~AVMuxer() {
-  close();
-}
-
-void AVMuxer::open(const char* url,
-                   const char* fmt_name,
-                   const AVOutputFormat* fmt) {
-  char err_msg[AV_ERROR_MAX_STRING_SIZE];
+Muxer::Muxer(const char* url,
+             const char* fmt_name,
+             const AVOutputFormat* fmt) {
   int rc;
-
-  assert(!ctx_);
+  char err_msg[AV_ERROR_MAX_STRING_SIZE];
 
   rc = avformat_alloc_output_context2(&ctx_, fmt, fmt_name, url);
   if (rc < 0) {
@@ -96,34 +84,41 @@ void AVMuxer::open(const char* url,
 
 err_exit:
   av_strerror(rc, err_msg, sizeof(err_msg));
-  close();
+  clear();
   throw std::runtime_error(err_msg);
 }
 
-void AVMuxer::close() {
-  if (ctx_) {
-    if (need_trailer_) {
-      av_write_trailer(ctx_);
-      need_trailer_ = false;
-    }
-    if (need_close_) {
-      avio_closep(&ctx_->pb);
-      need_close_ = false;
-    }
-    avformat_free_context(ctx_);
-    ctx_ = nullptr;
-  }
+Muxer::Muxer(Muxer&& rhs) noexcept
+    : ctx_(rhs.ctx_),
+      need_close_(rhs.need_close_),
+      need_trailer_(rhs.need_trailer_) {
+  rhs.ctx_ = nullptr;
 }
 
-AVStream* AVMuxer::new_stream() {
-  assert(ctx_);
+Muxer& Muxer::operator=(Muxer&& rhs) noexcept {
+  if (this != &rhs) {
+    clear();
+
+    ctx_ = rhs.ctx_;
+    need_close_ = rhs.need_close_;
+    need_trailer_ = rhs.need_trailer_;
+
+    rhs.ctx_ = nullptr;
+  }
+
+  return *this;
+}
+
+Muxer::~Muxer() {
+  clear();
+}
+
+AVStream* Muxer::new_stream() {
   return avformat_new_stream(ctx_, nullptr);
 }
 
-int AVMuxer::write_header(AVDictionary** opts) {
+int Muxer::write_header(AVDictionary** opts) {
   int rc;
-
-  assert(ctx_);
 
   rc = avformat_write_header(ctx_, opts);
   if (rc >= 0) {
@@ -133,12 +128,23 @@ int AVMuxer::write_header(AVDictionary** opts) {
   return rc;
 }
 
-int AVMuxer::write_frame(AVPacket* pkt) {
-  assert(ctx_);
+int Muxer::write_frame(AVPacket* pkt) {
   return av_write_frame(ctx_, pkt);
 }
 
-int AVMuxer::interleaved_write_frame(AVPacket* pkt) {
-  assert(ctx_);
+int Muxer::interleaved_write_frame(AVPacket* pkt) {
   return av_interleaved_write_frame(ctx_, pkt);
+}
+
+void Muxer::clear() {
+  if (ctx_) {
+    if (need_trailer_) {
+      av_write_trailer(ctx_);
+    }
+    if (need_close_) {
+      avio_closep(&ctx_->pb);
+    }
+    avformat_free_context(ctx_);
+    ctx_ = nullptr;
+  }
 }

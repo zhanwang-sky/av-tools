@@ -16,57 +16,47 @@ namespace av {
 
 namespace ffmpeg {
 
-class AVFormatBase {
+class Demuxer {
  public:
-  AVFormatBase(const AVFormatBase&) = delete;
-  AVFormatBase& operator=(const AVFormatBase&) = delete;
+  Demuxer(const Demuxer&) = delete;
+  Demuxer& operator=(const Demuxer&) = delete;
 
-  AVFormatContext* ctx() const {
-    return ctx_;
-  }
+  Demuxer(const char* url,
+          const AVInputFormat* fmt = nullptr,
+          AVDictionary** opts = nullptr);
 
- protected:
-  AVFormatBase() { }
+  Demuxer(Demuxer&& rhs) noexcept;
 
-  virtual ~AVFormatBase() { }
+  Demuxer& operator=(Demuxer&& rhs) noexcept;
+
+  virtual ~Demuxer();
+
+  inline AVFormatContext* ctx() { return ctx_; }
+
+  int read_frame(AVPacket* pkt);
+
+ private:
+  void clear();
 
   AVFormatContext* ctx_ = nullptr;
 };
 
-class AVDemuxer : public AVFormatBase {
+class Muxer {
  public:
-  AVDemuxer();
+  Muxer(const Muxer&) = delete;
+  Muxer& operator=(const Muxer&) = delete;
 
-  AVDemuxer(const char* url,
-            const AVInputFormat* fmt = nullptr,
-            AVDictionary** opts = nullptr);
+  Muxer(const char* url,
+        const char* fmt_name = nullptr,
+        const AVOutputFormat* fmt = nullptr);
 
-  virtual ~AVDemuxer();
+  Muxer(Muxer&& rhs) noexcept;
 
-  void open(const char* url,
-            const AVInputFormat* fmt = nullptr,
-            AVDictionary** opts = nullptr);
+  Muxer& operator=(Muxer&& rhs) noexcept;
 
-  void close();
+  virtual ~Muxer();
 
-  int read_frame(AVPacket* pkt);
-};
-
-class AVMuxer : public AVFormatBase {
- public:
-  AVMuxer();
-
-  AVMuxer(const char* url,
-          const char* fmt_name = nullptr,
-          const AVOutputFormat* fmt = nullptr);
-
-  virtual ~AVMuxer();
-
-  void open(const char* url,
-            const char* fmt_name = nullptr,
-            const AVOutputFormat* fmt = nullptr);
-
-  void close();
+  inline AVFormatContext* ctx() { return ctx_; }
 
   AVStream* new_stream();
 
@@ -77,8 +67,11 @@ class AVMuxer : public AVFormatBase {
   int interleaved_write_frame(AVPacket* pkt);
 
  private:
-  bool need_trailer_ = false;
+  void clear();
+
+  AVFormatContext* ctx_ = nullptr;
   bool need_close_ = false;
+  bool need_trailer_ = false;
 };
 
 } // ffmpeg
