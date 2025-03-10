@@ -99,7 +99,7 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples,
   // realloc
   if (samples_ < out_samples) {
     if (samples_buf_) {
-      av_free(&samples_buf_[0]);
+      av_freep(&samples_buf_[0]);
     }
   }
 
@@ -125,7 +125,7 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples,
 
   out_samples = swr_convert(swr_,
                             samples_buf_, samples_,
-                            in_samples_buf, in_samples);
+                            const_cast<const uint8_t**>(in_samples_buf), in_samples);
   if (out_samples < 0) {
     return out_samples;
   }

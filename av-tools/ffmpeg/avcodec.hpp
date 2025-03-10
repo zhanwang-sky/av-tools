@@ -49,6 +49,10 @@ class Decoder : public CodecBase {
 
   Decoder(const char* codec_name);
 
+  Decoder(Decoder&& rhs) noexcept;
+
+  Decoder& operator=(Decoder&& rhs) noexcept;
+
   virtual ~Decoder();
 
   int send_packet(const AVPacket* pkt);
@@ -61,6 +65,10 @@ class Encoder : public CodecBase {
   Encoder(enum AVCodecID codec_id);
 
   Encoder(const char* codec_name);
+
+  Encoder(Encoder&& rhs) noexcept;
+
+  Encoder& operator=(Encoder&& rhs) noexcept;
 
   virtual ~Encoder();
 

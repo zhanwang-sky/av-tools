@@ -75,6 +75,16 @@ Decoder::Decoder(enum AVCodecID codec_id)
 Decoder::Decoder(const char* codec_name)
     : CodecBase(avcodec_find_decoder_by_name(codec_name)) { }
 
+Decoder::Decoder(Decoder&& rhs) noexcept
+    : CodecBase(std::move(rhs)) { }
+
+Decoder& Decoder::operator=(Decoder&& rhs) noexcept {
+  if (this != &rhs) {
+    CodecBase::operator=(std::move(rhs));
+  }
+  return *this;
+}
+
 Decoder::~Decoder() { }
 
 int Decoder::send_packet(const AVPacket* pkt) {
@@ -92,6 +102,16 @@ Encoder::Encoder(enum AVCodecID codec_id)
 
 Encoder::Encoder(const char* codec_name)
     : CodecBase(avcodec_find_encoder_by_name(codec_name)) { }
+
+Encoder::Encoder(Encoder&& rhs) noexcept
+    : CodecBase(std::move(rhs)) { }
+
+Encoder& Encoder::operator=(Encoder &&rhs) noexcept {
+  if (this != &rhs) {
+    CodecBase::operator=(std::move(rhs));
+  }
+  return *this;
+}
 
 Encoder::~Encoder() { }
 
