@@ -16,23 +16,7 @@ using std::cerr;
 using std::endl;
 
 int test_decode_helper(const char* input_file) {
-  try {
-    av::DecodeHelper decode_helper(input_file);
-    unsigned nb_frames = 0;
-    int rc = 0;
-
-    rc = decode_helper.play(0, [&nb_frames](AVFrame* frame) {
-      cout << "[" << ++nb_frames << "] pts=" << frame->pts
-           << ", duration=" << frame->duration << endl;
-    });
-
-    cout << "done, total " << nb_frames << " frames, rc=" << rc << endl;
-
-  } catch (const std::exception& e) {
-    cerr << "Exception caught: " << e.what() << endl;
-    return -1;
-  }
-
+  // todo
   return 0;
 }
 

@@ -10,110 +10,68 @@
 
 using namespace av;
 
-DecodeHelper::DecodeHelper(const char* filename)
-    : demuxer_(filename) {
-  AVFormatContext* demux_ctx = demuxer_.ctx();
+std::unique_ptr<EncodeHelper>
+EncodeHelper::FromCodecID(const char* filename,
+                          const std::vector<AVCodecID>& ids,
+                          on_new_stream_cb&& on_new_stream) {
+  try {
+    auto p_helper = std::make_unique<EncodeHelper>(filename);
+    auto& muxer = p_helper->muxer_;
 
-  av_dump_format(demux_ctx, 0, filename, 0);
-
-  for (unsigned i = 0; i != demux_ctx->nb_streams; ++i) {
-    AVStream* st = demux_ctx->streams[i];
-
-    auto& decoder = decoders_.emplace_back(st->codecpar->codec_id);
-    AVCodecContext* decode_ctx = decoder.ctx();
-
-    if (avcodec_parameters_to_context(decode_ctx, st->codecpar) < 0) {
-      throw std::runtime_error("DecodeHelper: fail to copy codecpar to decoder");
+    for (std::size_t i = 0; i != ids.size(); ++i) {
+      auto& encoder = p_helper->encoders_.emplace_back(ids[i]);
+      AVStream* st = muxer.new_stream();
+      if (!st) {
+        throw;
+      }
+      on_new_stream(muxer, encoder, st, i);
     }
-    decode_ctx->pkt_timebase = st->time_base;
 
-    if ((decode_ctx->codec_type == AVMEDIA_TYPE_AUDIO) ||
-        (decode_ctx->codec_type == AVMEDIA_TYPE_VIDEO)) {
-      decoder.open();
-    }
+    return p_helper;
+
+  } catch (...) {
+    return nullptr;
   }
 }
 
-int DecodeHelper::play(int stream_index, on_frame_cb&& on_frame) {
-  AVPacket* pkt = nullptr;
-  AVFrame* frame = nullptr;
+EncodeHelper::EncodeHelper(const char* filename)
+    : pkt_(av_packet_alloc(), pkt_deleter), muxer_(filename) {
+  if (!pkt_) {
+    throw std::runtime_error("EncodeHelper: fail to alloc packet");
+  }
+}
+
+int EncodeHelper::write_frame(std::size_t stream_id,
+                              AVFrame* frame,
+                              on_write_cb&& on_write) {
+  auto& encoder = encoders_[stream_id];
   int rc = 0;
-  int ret = 0;
 
-  pkt = av_packet_alloc();
-  frame = av_frame_alloc();
-  if (!pkt || !frame) {
-    goto exit;
-  }
-
-  for (;;) {
-    // demux
-    rc = demuxer_.read_frame(pkt);
-    if (rc < 0) {
-      if (rc != AVERROR_EOF) {
-        ret = -1;
-      }
-      break;
-    }
-    if (pkt->stream_index != stream_index) {
-      av_packet_unref(pkt);
-      continue;
-    }
-
-    // decode PART I
-    rc = decoders_[stream_index].send_packet(pkt);
-    av_packet_unref(pkt);
-    if (rc == AVERROR(EAGAIN)) {
-      continue;
-    } else if (rc < 0) {
-      ret = -1;
-      break;
-    }
-
-    // decode PART II
-    for (;;) {
-      rc = decoders_[stream_index].receive_frame(frame);
-      if (rc < 0) {
-        if (rc != AVERROR(EAGAIN)) {
-          ret = -1;
-        }
-        break;
-      }
-      // user callback
-      on_frame(frame);
-    }
-    // decode error
-    if (ret < 0) {
-      break;
-    }
-  }
-
-  // error occurred
-  if (ret < 0) {
-    goto exit;
-  }
-
-  // flush PART I
-  rc = decoders_[stream_index].send_packet(nullptr);
+  rc = encoder.send_frame(frame);
   if (rc < 0) {
-    ret = -1;
-    goto exit;
-  }
-  // flush PART II
-  for (;;) {
-    rc = decoders_[stream_index].receive_frame(frame);
-    if (rc < 0) {
-      if (rc != AVERROR_EOF) {
-        ret = -1;
-      }
-      break;
-    }
-    // user callback
-    on_frame(frame);
+    return -1;
   }
 
-exit:
-  av_frame_free(&frame);
-  av_packet_free(&pkt);
-  return ret;
+  for (;;) {
+    rc = encoder.receive_packet(pkt_.get());
+    if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
+      return 0;
+    } else if (rc < 0) {
+      return -1;
+    }
+
+    if (!on_write(stream_id, frame, pkt_.get())) {
+      // No matter whether the user unref the pkt or not,
+      // it will be unref on the next call to receive_packet().
+      continue;
+    }
+
+    rc = muxer_.interleaved_write_frame(pkt_.get());
+    if (rc < 0) {
+      // The returned packet will be blank, even on error. no need to unref
+      return -1;
+    }
+  }
+
+  return 0;
 }
