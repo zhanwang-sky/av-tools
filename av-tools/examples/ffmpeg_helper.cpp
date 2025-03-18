@@ -1,14 +1,14 @@
 //
-//  helper.cpp
+//  ffmpeg_helper.cpp
 //  av-tools
 //
 //  Created by zhanwang-sky on 2025/3/14.
 //
 
 #include <stdexcept>
-#include "helper.hpp"
+#include "ffmpeg_helper.hpp"
 
-using namespace av::ffmpeg;
+using namespace av;
 
 DecodeHelper::DecodeHelper(const char* filename)
     : demuxer_(filename) {

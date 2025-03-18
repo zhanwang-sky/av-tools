@@ -1,12 +1,12 @@
 //
-//  helper.hpp
+//  ffmpeg_helper.hpp
 //  av-tools
 //
 //  Created by zhanwang-sky on 2025/3/14.
 //
 
-#ifndef helper_hpp
-#define helper_hpp
+#ifndef ffmpeg_helper_hpp
+#define ffmpeg_helper_hpp
 
 #include <functional>
 #include <vector>
@@ -15,9 +15,9 @@
 
 namespace av {
 
-namespace ffmpeg {
-
 struct DecodeHelper {
+  using Demuxer = ffmpeg::Demuxer;
+  using Decoder = ffmpeg::Decoder;
   using on_frame_cb = std::function<void(AVFrame*)>;
 
   DecodeHelper(const char* filename);
@@ -28,8 +28,6 @@ struct DecodeHelper {
   std::vector<Decoder> decoders_;
 };
 
-} // ffmpeg
-
 } // av
 
-#endif /* helper_hpp */
+#endif /* ffmpeg_helper_hpp */

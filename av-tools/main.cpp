@@ -6,9 +6,10 @@
 //
 
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 
-#include "ffmpeg/helper.hpp"
+#include "ffmpeg_helper.hpp"
 
 using std::cout;
 using std::cerr;
@@ -16,7 +17,7 @@ using std::endl;
 
 int test_decode_helper(const char* input_file) {
   try {
-    av::ffmpeg::DecodeHelper decode_helper(input_file);
+    av::DecodeHelper decode_helper(input_file);
     unsigned nb_frames = 0;
     int rc = 0;
 
