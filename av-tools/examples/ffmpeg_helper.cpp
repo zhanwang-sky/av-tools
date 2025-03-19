@@ -82,3 +82,55 @@ int DecodeHelper::flush(unsigned stream_id, on_read_cb&& on_read) {
 
   return (rc == 0) ? 0 : -1;
 }
+
+std::unique_ptr<EncodeHelper>
+EncodeHelper::FromCodecID(const char* filename,
+                          const std::vector<AVCodecID>& vid,
+                          on_stream_cb&& on_stream) {
+  try {
+    auto p_helper = std::make_unique<EncodeHelper>(filename);
+    auto& muxer = p_helper->muxer_;
+
+    for (std::size_t i = 0; i != vid.size(); ++i) {
+      auto& encoder = p_helper->encoders_.emplace_back(vid[i]);
+      AVStream* st = muxer.new_stream();
+      if (!st) {
+        throw;
+      }
+      on_stream(muxer, encoder, st, static_cast<unsigned>(i));
+    }
+
+    return p_helper;
+
+  } catch (...) {
+    return nullptr;
+  }
+}
+
+EncodeHelper::EncodeHelper(const char* filename)
+    : pkt_(av_packet_alloc(), pkt_deleter), muxer_(filename) { }
+
+int EncodeHelper::write(unsigned stream_id,
+                        AVFrame* frame,
+                        on_write_cb&& on_write) {
+  auto& encoder = encoders_[stream_id];
+  int rc = 0;
+  int pkt_cnt = 0;
+
+  rc = encoder.send_frame(frame);
+  while (rc == 0) {
+    rc = encoder.receive_packet(pkt_.get());
+    if (rc < 0) {
+      if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
+        rc = 0;
+      }
+      break;
+    }
+    ++pkt_cnt;
+    if (on_write(stream_id, frame, pkt_.get())) {
+      rc = muxer_.interleaved_write_frame(pkt_.get());
+    }
+  }
+
+  return (rc == 0) ? pkt_cnt : -1;
+}
