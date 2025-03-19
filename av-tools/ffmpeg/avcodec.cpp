@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <stdexcept>
+#include <utility>
 
 #include "avcodec.hpp"
 

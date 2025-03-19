@@ -287,7 +287,9 @@
 		D9853C8F2D55ADF800D4BBEA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++23";
 				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = c17;
 				HEADER_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -297,7 +299,9 @@
 		D9853C902D55ADF800D4BBEA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++23";
 				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = c17;
 				HEADER_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
