@@ -10,68 +10,75 @@
 
 using namespace av;
 
-std::unique_ptr<EncodeHelper>
-EncodeHelper::FromCodecID(const char* filename,
-                          const std::vector<AVCodecID>& ids,
-                          on_new_stream_cb&& on_new_stream) {
-  try {
-    auto p_helper = std::make_unique<EncodeHelper>(filename);
-    auto& muxer = p_helper->muxer_;
+DecodeHelper::DecodeHelper(const char* filename)
+    : frame_(av_frame_alloc(), frame_deleter),
+      pkt_(av_packet_alloc(), pkt_deleter),
+      demuxer_(filename) {
+  if (!frame_ || !pkt_) {
+    throw std::runtime_error("DecodeHelper: fail to alloc objects");
+  }
 
-    for (std::size_t i = 0; i != ids.size(); ++i) {
-      auto& encoder = p_helper->encoders_.emplace_back(ids[i]);
-      AVStream* st = muxer.new_stream();
-      if (!st) {
-        throw;
-      }
-      on_new_stream(muxer, encoder, st, i);
+  AVFormatContext* demux_ctx = demuxer_.ctx();
+
+  av_dump_format(demux_ctx, 0, filename, 0);
+
+  for (unsigned i = 0; i != demux_ctx->nb_streams; ++i) {
+    AVStream* st = demux_ctx->streams[i];
+    auto& decoder = decoders_.emplace_back(st->codecpar->codec_id);
+    AVCodecContext* decode_ctx = decoder.ctx();
+    if (avcodec_parameters_to_context(decode_ctx, st->codecpar) < 0) {
+      throw std::runtime_error("DecodeHelper: fail to copy codecpar");
     }
-
-    return p_helper;
-
-  } catch (...) {
-    return nullptr;
+    decode_ctx->pkt_timebase = st->time_base;
+    decoder.open();
   }
 }
 
-EncodeHelper::EncodeHelper(const char* filename)
-    : pkt_(av_packet_alloc(), pkt_deleter), muxer_(filename) {
-  if (!pkt_) {
-    throw std::runtime_error("EncodeHelper: fail to alloc packet");
-  }
-}
-
-int EncodeHelper::write_frame(std::size_t stream_id,
-                              AVFrame* frame,
-                              on_write_cb&& on_write) {
-  auto& encoder = encoders_[stream_id];
+int DecodeHelper::read(on_read_cb&& on_read) {
   int rc = 0;
 
-  rc = encoder.send_frame(frame);
-  if (rc < 0) {
+  rc = demuxer_.read_frame(pkt_.get());
+  if (rc == AVERROR_EOF) {
+    return 0;
+  } else if (rc < 0) {
     return -1;
   }
 
-  for (;;) {
-    rc = encoder.receive_packet(pkt_.get());
-    if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
-      return 0;
-    } else if (rc < 0) {
-      return -1;
-    }
-
-    if (!on_write(stream_id, frame, pkt_.get())) {
-      // No matter whether the user unref the pkt or not,
-      // it will be unref on the next call to receive_packet().
-      continue;
-    }
-
-    rc = muxer_.interleaved_write_frame(pkt_.get());
-    if (rc < 0) {
-      // The returned packet will be blank, even on error. no need to unref
-      return -1;
+  if (on_read(pkt_->stream_index, pkt_.get(), nullptr)) {
+    auto& decoder = decoders_[pkt_->stream_index];
+    rc = decoder.send_packet(pkt_.get());
+    while (rc == 0) {
+      rc = decoder.receive_frame(frame_.get());
+      if (rc < 0) {
+        if (rc == AVERROR(EAGAIN)) {
+          rc = 0;
+        }
+        break;
+      }
+      on_read(pkt_->stream_index, pkt_.get(), frame_.get());
     }
   }
 
-  return 0;
+  av_packet_unref(pkt_.get());
+
+  return (rc == 0) ? 1 : -1;
+}
+
+int DecodeHelper::flush(unsigned stream_id, on_read_cb&& on_read) {
+  auto& decoder = decoders_[stream_id];
+  int rc = 0;
+
+  rc = decoder.send_packet(nullptr);
+  while (rc == 0) {
+    rc = decoder.receive_frame(frame_.get());
+    if (rc < 0) {
+      if (rc == AVERROR_EOF) {
+        rc = 0;
+      }
+      break;
+    }
+    on_read(stream_id, nullptr, frame_.get());
+  }
+
+  return (rc == 0) ? 0 : -1;
 }
