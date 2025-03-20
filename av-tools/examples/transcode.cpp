@@ -5,11 +5,11 @@
 //  Created by zhanwang-sky on 2025/2/17.
 //
 
+#include <cassert>
 #include <iostream>
 #include <stdexcept>
 
-#include "avcodec.hpp"
-#include "avformat.hpp"
+#include "ffmpeg_helper.hpp"
 #include "transcode.hpp"
 
 //#define INPUT_FORMAT_NAME "alaw"
@@ -27,17 +27,12 @@ using std::endl;
 int transcode(const char* input_file, const char* output_file) {
   const AVInputFormat* input_fmt = nullptr;
   AVDictionary* input_opts = nullptr;
-  AVPacket* input_pkt = nullptr;
-  AVPacket* output_pkt = nullptr;
-  AVFrame* frame = nullptr;
-  int ret = 0;
 
 #ifdef INPUT_FORMAT_NAME
   input_fmt = av_find_input_format(INPUT_FORMAT_NAME);
   if (!input_fmt) {
     cerr << "Could not find input format '" << INPUT_FORMAT_NAME << "'\n";
-    ret = -1;
-    goto exit;
+    return -1;
   }
 #endif
 
@@ -49,104 +44,108 @@ int transcode(const char* input_file, const char* output_file) {
       || (av_dict_set(&input_opts, "ch_layout", INPUT_CH_LAYOUT, 0) < 0)
 #endif
       ) {
+    av_dict_free(&input_opts);
     cerr << "Fail to set input options\n";
-    ret = -1;
-    goto exit;
+    return -1;
   }
 
-  input_pkt = av_packet_alloc();
-  output_pkt = av_packet_alloc();
-  frame = av_frame_alloc();
-  if (!input_pkt || !output_pkt || !frame) {
-    cerr << "Fail to alloc FFmpeg objects\n";
-    ret = -1;
-    goto exit;
-  }
+  int ret = 0;
 
   try {
-    // Input Demuxer
-    av::ffmpeg::Demuxer demuxer(input_file, input_fmt, &input_opts);
+    using Demuxer = av::DecodeHelper::Demuxer;
+    using Decoder = av::DecodeHelper::Decoder;
+    using Muxer   = av::EncodeHelper::Muxer;
+    using Encoder = av::EncodeHelper::Encoder;
+
+    // input file
+    av::DecodeHelper decode_helper(input_file, input_fmt, &input_opts);
+    auto& demuxer = decode_helper.demuxer_;
     AVFormatContext* demux_ctx = demuxer.ctx();
-    AVStream* ist = nullptr;
 
     av_dump_format(demux_ctx, 0, input_file, 0);
+
+    // find target stream
+    AVCodecContext* decode_ctx = nullptr;
+    AVStream* ist = nullptr;
 
     for (unsigned i = 0; i != demux_ctx->nb_streams; ++i) {
       AVStream* st = demux_ctx->streams[i];
       if (st->codecpar->codec_id == INPUT_CODEC_ID) {
+        decode_ctx = decode_helper.decoders_[i].ctx();
         ist = st;
         break;
       }
     }
     if (!ist) {
-      throw std::runtime_error("Could not find specified input stream");
+      throw std::runtime_error("Could not find target input stream");
     }
 
     cout << "ist->time_base: "
          << ist->time_base.num << '/' << ist->time_base.den
          << endl;
 
-    // Decoder
-    av::ffmpeg::Decoder decoder(ist->codecpar->codec_id);
-    AVCodecContext* decode_ctx = decoder.ctx();
-
-    if (avcodec_parameters_to_context(decode_ctx, ist->codecpar) < 0) {
-      throw std::runtime_error("Fail to copy codecpar to decoder");
-    }
-    decode_ctx->pkt_timebase = ist->time_base;
-
-    decoder.open();
-
-    // Encoder
-    av::ffmpeg::Encoder encoder(OUTPUT_CODEC_ID);
-    AVCodecContext* encode_ctx = encoder.ctx();
-
-    if (encode_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-#ifdef OUTPUT_BITRATE
-      // average bitrate
-      encode_ctx->bit_rate = OUTPUT_BITRATE;
-#endif
-      // basic video attributes
-      encode_ctx->time_base = av_inv_q(decode_ctx->framerate);
-      encode_ctx->framerate = decode_ctx->framerate;
-      encode_ctx->width = decode_ctx->width;
-      encode_ctx->height = decode_ctx->height;
-      // not always supported by the encoder
-      encode_ctx->pix_fmt = decode_ctx->pix_fmt;
-    } else if (encode_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
-      encode_ctx->time_base = av_make_q(1, decode_ctx->sample_rate);
-      encode_ctx->sample_rate = decode_ctx->sample_rate;
-      encode_ctx->sample_fmt = decode_ctx->sample_fmt;
-      if (av_channel_layout_copy(&encode_ctx->ch_layout,
-                                 &decode_ctx->ch_layout) < 0) {
-        throw std::runtime_error("Fail to copy ch_layout");
-      }
-    }
-
-    cout << "encoder->time_base: "
-         << encode_ctx->time_base.num << '/' << encode_ctx->time_base.den
-         << endl;
-
-    // Output Muxer
-    av::ffmpeg::Muxer muxer(output_file);
-    AVFormatContext* mux_ctx = muxer.ctx();
+    // setup output stream
     AVStream* ost = nullptr;
 
-    ost = muxer.new_stream();
-    if (!ost) {
-      throw std::runtime_error("Fail to create output stream");
+    auto setup_ost = [decode_ctx, ist, &ost](Muxer& muxer,
+                                             Encoder& encoder,
+                                             AVStream* st,
+                                             std::size_t) {
+      AVFormatContext* mux_ctx = muxer.ctx();
+      AVCodecContext* encode_ctx = encoder.ctx();
+
+      assert(ost == nullptr);
+
+      // encoder setup
+      if (encode_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+#ifdef OUTPUT_BITRATE
+        // average bitrate
+        encode_ctx->bit_rate = OUTPUT_BITRATE;
+#endif
+        // basic video attributes
+        encode_ctx->time_base = av_inv_q(decode_ctx->framerate);
+        encode_ctx->framerate = decode_ctx->framerate;
+        encode_ctx->width = decode_ctx->width;
+        encode_ctx->height = decode_ctx->height;
+        encode_ctx->pix_fmt = decode_ctx->pix_fmt;
+      } else if (encode_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+        encode_ctx->time_base = av_make_q(1, decode_ctx->sample_rate);
+        encode_ctx->sample_rate = decode_ctx->sample_rate;
+        encode_ctx->sample_fmt = decode_ctx->sample_fmt;
+        if (av_channel_layout_copy(&encode_ctx->ch_layout,
+                                   &decode_ctx->ch_layout) < 0) {
+          throw std::runtime_error("Fail to copy ch_layout");
+        }
+      }
+      if (mux_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
+        encode_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+      }
+      encoder.open();
+
+      cout << "encoder->time_base: "
+           << encode_ctx->time_base.num << '/' << encode_ctx->time_base.den
+           << endl;
+
+      // stream setup
+      if (avcodec_parameters_from_context(st->codecpar, encode_ctx) < 0) {
+        throw std::runtime_error("Fail to copy codecpar from encoder");
+      }
+      st->time_base = ist->time_base; // inconclusive
+
+      ost = st;
+    };
+
+    auto p_encode_helper = av::EncodeHelper::FromCodecID(output_file,
+                                                         {OUTPUT_CODEC_ID},
+                                                         setup_ost);
+    if (!p_encode_helper) {
+      throw std::runtime_error("Fail to create EncodeHelper");
     }
 
-    // Encoder & Output Stream
-    if (mux_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
-      encode_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-    }
-    encoder.open();
+    assert(ost != nullptr);
 
-    if (avcodec_parameters_from_context(ost->codecpar, encode_ctx) < 0) {
-      throw std::runtime_error("Fail to copy codecpar from encoder");
-    }
-    ost->time_base = encode_ctx->time_base; // inconclusive
+    auto& muxer = p_encode_helper->muxer_;
+    AVFormatContext* mux_ctx = muxer.ctx();
 
     if (muxer.write_header() < 0) {
       throw std::runtime_error("Fail to write header");
@@ -158,114 +157,62 @@ int transcode(const char* input_file, const char* output_file) {
          << ost->time_base.num << '/' << ost->time_base.den
          << endl;
 
-    // Transcode
-    // packet -> frames[]
-    // frame -> packets[]
+    // transcode
+    unsigned in_pkts = 0;
+    unsigned out_pkts = 0;
+    unsigned nb_frames = 0;
+    int decode_rc = 0;
+    int encode_rc = 0;
 
-    // stats
-    unsigned input_pkt_cnt = 0;
-    unsigned output_pkt_cnt = 0;
-    unsigned frame_cnt = 0;
-
-    // manipulators
-    auto on_input_pkt = [&input_pkt_cnt](AVPacket* pkt) {
-      ++input_pkt_cnt;
-    };
-
-    auto on_output_pkt = [&output_pkt_cnt, ist, ost](AVPacket* pkt) {
-      ++output_pkt_cnt;
-      pkt->stream_index = ost->index;
-      av_packet_rescale_ts(pkt, ist->time_base, ost->time_base);
-    };
-
-    auto on_frame = [&frame_cnt](AVFrame* frame) {
-      ++frame_cnt;
-      cout << "frame[" << frame_cnt << "] pts=" << frame->pts << endl;
-    };
-
-    // wrappers
-    auto frame2packets = [&encoder, &muxer, &on_output_pkt, output_pkt](AVFrame* frame) -> int {
-      int rc = encoder.send_frame(frame);
-      if (frame) {
-        av_frame_unref(frame);
-      }
-      while (rc >= 0) {
-        if ((rc = encoder.receive_packet(output_pkt) < 0)) {
-          if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
-            rc = 0;
-          }
-          break;
-        }
-        on_output_pkt(output_pkt);
-        rc = muxer.interleaved_write_frame(output_pkt);
-      }
-      return rc;
-    };
-
-    auto packet2frames = [&decoder, &frame2packets, &on_frame, frame](AVPacket* pkt) -> int {
-      int rc = decoder.send_packet(pkt);
+    auto on_write = [ist, ost, &out_pkts](unsigned st_id, AVFrame*, AVPacket* pkt) {
       if (pkt) {
-        av_packet_unref(pkt);
+        // pkt->duration =
+        av_packet_rescale_ts(pkt, ist->time_base, ost->time_base);
+        pkt->stream_index = st_id;
+        pkt->pos = -1;
+        ++out_pkts;
       }
-      while (rc >= 0) {
-        if ((rc = decoder.receive_frame(frame)) < 0) {
-          if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
-            rc = 0;
-          }
-          break;
-        }
-        on_frame(frame);
-        rc = frame2packets(frame);
-      }
-      return rc;
+      return true;
     };
 
-    auto transcode_pkts = [&demuxer, &packet2frames, &on_input_pkt, input_pkt](int stream_index) -> int {
-      int rc;
-      for (;;) {
-        if ((rc = demuxer.read_frame(input_pkt)) < 0) {
-          break;
+    auto on_read = [&nb_frames, &p_encode_helper, &on_write, &encode_rc](unsigned, AVPacket*, AVFrame* frame) {
+      if (frame) {
+        if (encode_rc >= 0) {
+          encode_rc = p_encode_helper->write(0, frame, on_write);
         }
-        if ((stream_index >= 0) && (input_pkt->stream_index != stream_index)) {
-          av_packet_unref(input_pkt);
-          continue;
-        }
-        on_input_pkt(input_pkt);
-        if ((rc = packet2frames(input_pkt)) < 0) {
-          break;
-        }
+        ++nb_frames;
       }
-      return rc;
+      return true;
     };
 
-    // do transcode
-    int rc = transcode_pkts(ist->index);
-
-    if (rc == AVERROR_EOF) {
-      // flush
-      packet2frames(nullptr);
-      frame2packets(nullptr);
-    } else if (rc < 0) {
-      char err_msg[AV_ERROR_MAX_STRING_SIZE];
-      av_strerror(rc, err_msg, sizeof(err_msg));
-      cerr << "Error while transcoding: " << err_msg << endl;
+    // transcode loop
+    while ((decode_rc = decode_helper.read(on_read)) > 0) {
+      if (encode_rc < 0) {
+        break;
+      }
+      in_pkts += decode_rc;
+    }
+    // flush decoder
+    if ((decode_rc == 0) && (encode_rc >= 0)) {
+      decode_rc = decode_helper.flush(0, on_read);
+    }
+    // flush encoder
+    if ((decode_rc == 0) && (encode_rc >= 0)) {
+      encode_rc = p_encode_helper->write(0, nullptr, on_write);
     }
 
-    // print stats
-    cout << "input_pkts=" << input_pkt_cnt
-         << ", output_pkts=" << output_pkt_cnt
-         << ", frames=" << frame_cnt
-         << endl;
+    cout << "done, decode_rc=" << decode_rc << ", encode_rc=" << encode_rc << endl;
+    cout << "total " << nb_frames << " frames (" << in_pkts << " input packets | " << out_pkts << " output packets)\n";
 
   } catch (const std::exception& e) {
     cerr << "Exception caught: " << e.what() << endl;
     ret = -1;
+  } catch (...) {
+    cerr << "Unknown exception caught!\n";
+    ret = -1;
   }
 
-exit:
-  av_frame_free(&frame);
-  av_packet_free(&output_pkt);
-  av_packet_free(&input_pkt);
   av_dict_free(&input_opts);
+
   return ret;
 }

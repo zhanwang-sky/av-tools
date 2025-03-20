@@ -10,24 +10,24 @@
 
 using namespace av;
 
-DecodeHelper::DecodeHelper(const char* filename)
+DecodeHelper::DecodeHelper(const char* filename,
+                           const AVInputFormat* fmt,
+                           AVDictionary** opts)
     : frame_(av_frame_alloc(), frame_deleter),
       pkt_(av_packet_alloc(), pkt_deleter),
-      demuxer_(filename) {
+      demuxer_(filename, fmt, opts) {
   if (!frame_ || !pkt_) {
     throw std::runtime_error("DecodeHelper: fail to alloc objects");
   }
 
   AVFormatContext* demux_ctx = demuxer_.ctx();
 
-  av_dump_format(demux_ctx, 0, filename, 0);
-
   for (unsigned i = 0; i != demux_ctx->nb_streams; ++i) {
     AVStream* st = demux_ctx->streams[i];
     auto& decoder = decoders_.emplace_back(st->codecpar->codec_id);
     AVCodecContext* decode_ctx = decoder.ctx();
     if (avcodec_parameters_to_context(decode_ctx, st->codecpar) < 0) {
-      throw std::runtime_error("DecodeHelper: fail to copy codecpar");
+      throw std::runtime_error("DecodeHelper: fail to copy codecpar to decoder");
     }
     decode_ctx->pkt_timebase = st->time_base;
     decoder.open();
@@ -86,29 +86,29 @@ int DecodeHelper::flush(unsigned stream_id, on_read_cb&& on_read) {
 std::unique_ptr<EncodeHelper>
 EncodeHelper::FromCodecID(const char* filename,
                           const std::vector<AVCodecID>& vid,
-                          on_stream_cb&& on_stream) {
-  try {
-    auto p_helper = std::make_unique<EncodeHelper>(filename);
-    auto& muxer = p_helper->muxer_;
+                          on_stream_cb&& on_stream) noexcept(false) {
+  auto p_helper = std::make_unique<EncodeHelper>(filename);
+  auto& muxer = p_helper->muxer_;
 
-    for (std::size_t i = 0; i != vid.size(); ++i) {
-      auto& encoder = p_helper->encoders_.emplace_back(vid[i]);
-      AVStream* st = muxer.new_stream();
-      if (!st) {
-        throw;
-      }
-      on_stream(muxer, encoder, st, static_cast<unsigned>(i));
+  for (std::size_t i = 0; i != vid.size(); ++i) {
+    auto& encoder = p_helper->encoders_.emplace_back(vid[i]);
+    AVStream* st = muxer.new_stream();
+    if (!st) {
+      throw std::runtime_error("FromCodecID: fail to create output stream");
     }
-
-    return p_helper;
-
-  } catch (...) {
-    return nullptr;
+    on_stream(muxer, encoder, st, static_cast<unsigned>(i));
   }
+
+  return p_helper;
 }
 
 EncodeHelper::EncodeHelper(const char* filename)
-    : pkt_(av_packet_alloc(), pkt_deleter), muxer_(filename) { }
+    : pkt_(av_packet_alloc(), pkt_deleter),
+      muxer_(filename) {
+  if (!pkt_) {
+    throw std::runtime_error("EncodeHelper: fail to alloc objects");
+  }
+}
 
 int EncodeHelper::write(unsigned stream_id,
                         AVFrame* frame,

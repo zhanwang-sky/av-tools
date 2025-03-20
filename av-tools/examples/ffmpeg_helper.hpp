@@ -21,7 +21,9 @@ struct DecodeHelper {
   using Decoder = ffmpeg::Decoder;
   using on_read_cb = std::function<bool(unsigned, AVPacket*, AVFrame*)>;
 
-  DecodeHelper(const char* filename);
+  DecodeHelper(const char* filename,
+               const AVInputFormat* fmt = nullptr,
+               AVDictionary** opts = nullptr);
 
   int read(on_read_cb&& on_read);
 
@@ -31,8 +33,8 @@ struct DecodeHelper {
   static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
   std::unique_ptr<AVFrame, decltype(frame_deleter)> frame_;
   std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
-  Demuxer demuxer_;
   std::vector<Decoder> decoders_;
+  Demuxer demuxer_;
 };
 
 struct EncodeHelper {
@@ -44,7 +46,7 @@ struct EncodeHelper {
   static std::unique_ptr<EncodeHelper>
   FromCodecID(const char* filename,
               const std::vector<AVCodecID>& vid,
-              on_stream_cb&& on_stream);
+              on_stream_cb&& on_stream) noexcept(false);
 
   EncodeHelper(const char* filename);
 
@@ -52,8 +54,8 @@ struct EncodeHelper {
 
   static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
   std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
-  Muxer muxer_;
   std::vector<Encoder> encoders_;
+  Muxer muxer_;
 };
 
 } // av
