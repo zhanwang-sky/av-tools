@@ -9,7 +9,7 @@
 #include "ffmpeg_helper.hpp"
 #include "av_streamer.h"
 
-#define AAC_BITRATE (24 * 1024)
+#define AAC_BITRATE (24 << 10)
 
 using namespace av::ffmpeg;
 
@@ -43,7 +43,7 @@ struct av_streamer {
   // pcm_s16le mono => flv aac
   av_streamer(const char* url, int sample_rate, int64_t bit_rate)
       : audio_frame(av_frame_alloc(), frame_deleter),
-        audio_fifo(av_audio_fifo_alloc(AV_SAMPLE_FMT_S16, 1, sample_rate), &av_audio_fifo_free),
+        audio_fifo(av_audio_fifo_alloc(AV_SAMPLE_FMT_FLTP, 1, sample_rate), &av_audio_fifo_free),
         resampler(std::make_unique<Resampler>(ChLayoutHelper::get_mono(), AV_SAMPLE_FMT_S16, sample_rate,
                                               ChLayoutHelper::get_mono(), AV_SAMPLE_FMT_FLTP, sample_rate)),
         encode_helper(EncodeHelper::FromCodecID(
@@ -122,7 +122,7 @@ int av_streamer_write_samples(av_streamer_t* p_streamer,
   }
 
   auto on_write = [p_streamer](unsigned index, AVFrame* frame, AVPacket* pkt) {
-    if (frame && pkt) {
+    if (pkt) {
       pkt->dts = pkt->pts = av_rescale_q(p_streamer->nb_samples,
                                          p_streamer->audio_encoder.ctx()->time_base,
                                          p_streamer->audio_stream->time_base);
@@ -132,7 +132,9 @@ int av_streamer_write_samples(av_streamer_t* p_streamer,
       pkt->pos = -1;
       pkt->stream_index = index;
 
-      p_streamer->nb_samples += frame->nb_samples;
+      if (frame) {
+        p_streamer->nb_samples += frame->nb_samples;
+      }
     }
     return true;
   };

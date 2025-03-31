@@ -15,6 +15,8 @@
 		D90AF3AB2D7F1D8F00F2EFFB /* libswresample.5.3.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D90AF3A32D7F1D8F00F2EFFB /* libswresample.5.3.100.dylib */; };
 		D90AF3AC2D7F1D8F00F2EFFB /* libpostproc.58.3.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D90AF3A42D7F1D8F00F2EFFB /* libpostproc.58.3.100.dylib */; };
 		D90AF3AD2D7F1D8F00F2EFFB /* libavformat.61.7.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D90AF3A52D7F1D8F00F2EFFB /* libavformat.61.7.100.dylib */; };
+		D9D344912D9AA4CD00B2BCB8 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9D344902D9AA4CD00B2BCB8 /* CoreAudio.framework */; };
+		D9D344932D9AA4DB00B2BCB8 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9D344922D9AA4DB00B2BCB8 /* AudioToolbox.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,6 +41,8 @@
 		D90AF3A42D7F1D8F00F2EFFB /* libpostproc.58.3.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpostproc.58.3.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/lib/libpostproc.58.3.100.dylib; sourceTree = "<group>"; };
 		D90AF3A52D7F1D8F00F2EFFB /* libavformat.61.7.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.61.7.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_1/lib/libavformat.61.7.100.dylib; sourceTree = "<group>"; };
 		D9853C872D55ADF800D4BBEA /* av-tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "av-tools"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9D344902D9AA4CD00B2BCB8 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		D9D344922D9AA4DB00B2BCB8 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -54,6 +58,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D9D344932D9AA4DB00B2BCB8 /* AudioToolbox.framework in Frameworks */,
+				D9D344912D9AA4CD00B2BCB8 /* CoreAudio.framework in Frameworks */,
 				D90AF3A62D7F1D8F00F2EFFB /* libavfilter.10.4.100.dylib in Frameworks */,
 				D90AF3A72D7F1D8F00F2EFFB /* libavdevice.61.3.100.dylib in Frameworks */,
 				D90AF3A82D7F1D8F00F2EFFB /* libavutil.59.39.100.dylib in Frameworks */,
@@ -88,6 +94,8 @@
 		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D9D344922D9AA4DB00B2BCB8 /* AudioToolbox.framework */,
+				D9D344902D9AA4CD00B2BCB8 /* CoreAudio.framework */,
 				D90AF3A12D7F1D8F00F2EFFB /* libavcodec.61.19.101.dylib */,
 				D90AF39F2D7F1D8F00F2EFFB /* libavdevice.61.3.100.dylib */,
 				D90AF39E2D7F1D8F00F2EFFB /* libavfilter.10.4.100.dylib */,
