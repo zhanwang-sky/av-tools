@@ -16,9 +16,9 @@
 
 namespace av {
 
+namespace ffmpeg {
+
 struct DecodeHelper {
-  using Demuxer = ffmpeg::Demuxer;
-  using Decoder = ffmpeg::Decoder;
   using on_read_cb = std::function<bool(unsigned, AVPacket*, AVFrame*)>;
 
   DecodeHelper(const char* filename,
@@ -38,8 +38,6 @@ struct DecodeHelper {
 };
 
 struct EncodeHelper {
-  using Muxer = ffmpeg::Muxer;
-  using Encoder = ffmpeg::Encoder;
   using on_stream_cb = std::function<void(Muxer&, Encoder&, AVStream*, unsigned)>;
   using on_write_cb = std::function<bool(unsigned, AVFrame*, AVPacket*)>;
 
@@ -57,6 +55,8 @@ struct EncodeHelper {
   std::vector<Encoder> encoders_;
   Muxer muxer_;
 };
+
+} // ffmpeg
 
 } // av
 

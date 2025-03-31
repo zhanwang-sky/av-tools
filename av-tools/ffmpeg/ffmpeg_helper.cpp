@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include "ffmpeg_helper.hpp"
 
-using namespace av;
+using namespace av::ffmpeg;
 
 DecodeHelper::DecodeHelper(const char* filename,
                            const AVInputFormat* fmt,

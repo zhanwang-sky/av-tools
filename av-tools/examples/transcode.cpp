@@ -20,6 +20,8 @@
 #define OUTPUT_CODEC_ID AV_CODEC_ID_H265
 #define OUTPUT_BITRATE 10485760
 
+using namespace av::ffmpeg;
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -52,13 +54,8 @@ int transcode(const char* input_file, const char* output_file) {
   int ret = 0;
 
   try {
-    using Demuxer = av::DecodeHelper::Demuxer;
-    using Decoder = av::DecodeHelper::Decoder;
-    using Muxer   = av::EncodeHelper::Muxer;
-    using Encoder = av::EncodeHelper::Encoder;
-
     // input file
-    av::DecodeHelper decode_helper(input_file, input_fmt, &input_opts);
+    DecodeHelper decode_helper(input_file, input_fmt, &input_opts);
     auto& demuxer = decode_helper.demuxer_;
     AVFormatContext* demux_ctx = demuxer.ctx();
 
@@ -135,9 +132,9 @@ int transcode(const char* input_file, const char* output_file) {
       ost = st;
     };
 
-    auto p_encode_helper = av::EncodeHelper::FromCodecID(output_file,
-                                                         {OUTPUT_CODEC_ID},
-                                                         setup_ost);
+    auto p_encode_helper = EncodeHelper::FromCodecID(output_file,
+                                                     {OUTPUT_CODEC_ID},
+                                                     setup_ost);
     if (!p_encode_helper) {
       throw std::runtime_error("Fail to create EncodeHelper");
     }
