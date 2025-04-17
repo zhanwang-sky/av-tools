@@ -14,7 +14,7 @@ extern "C" {
 
 typedef struct av_streamer av_streamer_t;
 
-av_streamer_t* av_streamer_alloc(const char* url, int sample_rate);
+av_streamer_t* av_streamer_alloc(const char* url, int nb_channels, int sample_rate);
 
 void av_streamer_free(av_streamer_t* p_streamer);
 

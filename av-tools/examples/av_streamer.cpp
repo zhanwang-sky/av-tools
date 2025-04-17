@@ -15,11 +15,6 @@ using namespace av::ffmpeg;
 
 struct av_streamer {
   struct ChLayoutHelper {
-    static const AVChannelLayout& get_mono() {
-      static ChLayoutHelper mono(1);
-      return mono.layout;
-    }
-   private:
     ChLayoutHelper(int nb_channels) {
       av_channel_layout_default(&layout, nb_channels);
     }
@@ -29,6 +24,7 @@ struct av_streamer {
   static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
   std::unique_ptr<AVFrame, decltype(frame_deleter)> audio_frame;
   std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo;
+  std::unique_ptr<ChLayoutHelper> layout_helper;
   std::unique_ptr<Resampler> resampler;
   std::unique_ptr<EncodeHelper> encode_helper;
   // convince vars
@@ -36,27 +32,31 @@ struct av_streamer {
   Encoder& audio_encoder;
   AVStream* audio_stream;
   // saved input args
+  const int nb_channels;
   const int sample_rate;
   // realtime data
   int64_t nb_samples = 0;
 
-  // pcm_s16le mono => flv aac
-  av_streamer(const char* url, int sample_rate, int64_t bit_rate)
+  // pcm_s16le => flv aac
+  av_streamer(const char* url, int nb_channels, int sample_rate, int64_t bit_rate)
       : audio_frame(av_frame_alloc(), frame_deleter),
-        audio_fifo(av_audio_fifo_alloc(AV_SAMPLE_FMT_FLTP, 1, sample_rate), &av_audio_fifo_free),
-        resampler(std::make_unique<Resampler>(ChLayoutHelper::get_mono(), AV_SAMPLE_FMT_S16, sample_rate,
-                                              ChLayoutHelper::get_mono(), AV_SAMPLE_FMT_FLTP, sample_rate)),
+        audio_fifo(av_audio_fifo_alloc(AV_SAMPLE_FMT_FLTP, nb_channels, sample_rate),
+                   &av_audio_fifo_free),
+        layout_helper(std::make_unique<ChLayoutHelper>(nb_channels)),
+        resampler(std::make_unique<Resampler>(layout_helper->layout, AV_SAMPLE_FMT_S16, sample_rate,
+                                              layout_helper->layout, AV_SAMPLE_FMT_FLTP, sample_rate)),
         encode_helper(EncodeHelper::FromCodecID(
             url,
             {AV_CODEC_ID_AAC},
-            [sample_rate, bit_rate](Muxer& muxer, Encoder& encoder, AVStream* st, unsigned st_id) {
+            [nb_channels, sample_rate, bit_rate](Muxer& muxer, Encoder& encoder, AVStream* st, unsigned st_id) {
               if (st_id == 0) {
-                on_audio_stream(muxer, encoder, st, sample_rate, bit_rate);
+                on_audio_stream(muxer, encoder, st, nb_channels, sample_rate, bit_rate);
               }
             })),
         muxer(encode_helper->muxer_),
         audio_encoder(encode_helper->encoders_.at(0)),
         audio_stream(muxer.ctx()->streams[0]),
+        nb_channels(nb_channels),
         sample_rate(sample_rate) {
     if (!audio_frame || !audio_fifo) {
       throw std::runtime_error("av_streamer: fail to alloc objects");
@@ -70,6 +70,7 @@ struct av_streamer {
   static void on_audio_stream(Muxer& muxer,
                               Encoder& encoder,
                               AVStream* st,
+                              int nb_channels,
                               int sample_rate,
                               int64_t bit_rate) {
     AVFormatContext* mux_ctx = muxer.ctx();
@@ -79,7 +80,7 @@ struct av_streamer {
     encode_ctx->time_base = av_make_q(1, sample_rate);
     encode_ctx->sample_rate = sample_rate;
     encode_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    av_channel_layout_default(&encode_ctx->ch_layout, 1);
+    av_channel_layout_default(&encode_ctx->ch_layout, nb_channels);
     if (mux_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
       encode_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
@@ -92,9 +93,9 @@ struct av_streamer {
   }
 };
 
-av_streamer_t* av_streamer_alloc(const char* url, int sample_rate) {
+av_streamer_t* av_streamer_alloc(const char* url, int nb_channels, int sample_rate) {
   try {
-    return new av_streamer(url, sample_rate, AAC_BITRATE);
+    return new av_streamer(url, nb_channels, sample_rate, AAC_BITRATE);
   } catch (...) {
     return nullptr;
   }
@@ -154,7 +155,7 @@ int av_streamer_write_samples(av_streamer_t* p_streamer,
     frame->nb_samples = samples2rd;
     frame->format = AV_SAMPLE_FMT_FLTP;
     frame->sample_rate = p_streamer->sample_rate;
-    av_channel_layout_default(&frame->ch_layout, 1);
+    av_channel_layout_default(&frame->ch_layout, p_streamer->nb_channels);
 
     if (av_frame_get_buffer(frame.get(), 0) < 0) {
       return -1;

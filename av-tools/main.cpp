@@ -13,6 +13,7 @@
 #include "av_streamer.h"
 #include "MediaCapture.hpp"
 
+#define NB_CHANNELS 2
 #define SAMPLE_RATE 44100
 
 using std::cout;
@@ -21,9 +22,10 @@ using std::endl;
 
 class MyApp {
  public:
-  MyApp(const char* url, int sample_rate)
-      : streamer_(av_streamer_alloc(url, sample_rate), &av_streamer_free),
-        media_capture_(sample_rate, 1,
+  MyApp(const char* url, int nb_channels, int sample_rate)
+      : streamer_(av_streamer_alloc(url, nb_channels, sample_rate),
+                  &av_streamer_free),
+        media_capture_(sample_rate, nb_channels,
                        std::bind(&MyApp::on_audio, this,
                                  std::placeholders::_1,
                                  std::placeholders::_2)) { }
@@ -50,7 +52,7 @@ int main(int argc, char* argv[]) {
   }
 
   try {
-    MyApp app(argv[1], SAMPLE_RATE);
+    MyApp app(argv[1], NB_CHANNELS, SAMPLE_RATE);
 
     app.start();
 
