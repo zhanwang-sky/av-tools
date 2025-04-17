@@ -11,8 +11,8 @@
 
 @interface MediaCaptureImpl : NSObject <AVCaptureAudioDataOutputSampleBufferDelegate>
 
-- (instancetype)initWithSampleRate:(int) sampleRate
-                    withChannelNum:(int) channelNum
+- (instancetype)initWithChannelNum:(int) channelNum
+                    withSampleRate:(int) sampleRate
                        withAudioCb:(MediaCapture::on_audio_cb &&) audioCb;
 
 - (void)start;
@@ -28,8 +28,8 @@
   MediaCapture::on_audio_cb _audioCb;
 }
 
-- (instancetype)initWithSampleRate:(int) sampleRate
-                    withChannelNum:(int) channelNum
+- (instancetype)initWithChannelNum:(int) channelNum
+                    withSampleRate:(int) sampleRate
                        withAudioCb:(MediaCapture::on_audio_cb &&) audioCb {
   self = [super init];
 
@@ -115,9 +115,9 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 struct MediaCapture::Impl final {
   __strong MediaCaptureImpl* instance;
 
-  Impl(int sample_rate, int nb_channels, on_audio_cb&& on_audio)
-      : instance([[MediaCaptureImpl alloc] initWithSampleRate:sample_rate
-                                               withChannelNum:nb_channels
+  Impl(int nb_channels, int sample_rate, on_audio_cb&& on_audio)
+      : instance([[MediaCaptureImpl alloc] initWithChannelNum:nb_channels
+                                               withSampleRate:sample_rate
                                                   withAudioCb:(std::move(on_audio))]) {
     if (!instance) {
       throw std::runtime_error("MediaCapture::Impl: fail to init MediaCaptureImpl");
@@ -127,8 +127,8 @@ struct MediaCapture::Impl final {
   ~Impl() = default;
 };
 
-MediaCapture::MediaCapture(int sample_rate, int nb_channels, on_audio_cb&& on_audio)
-    : impl_(std::make_unique<Impl>(sample_rate, nb_channels, std::move(on_audio))) { }
+MediaCapture::MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio)
+    : impl_(std::make_unique<Impl>(nb_channels, sample_rate, std::move(on_audio))) { }
 
 MediaCapture::~MediaCapture() = default;
 

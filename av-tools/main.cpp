@@ -25,7 +25,7 @@ class MyApp {
   MyApp(const char* url, int nb_channels, int sample_rate)
       : streamer_(av_streamer_alloc(url, nb_channels, sample_rate),
                   &av_streamer_free),
-        media_capture_(sample_rate, nb_channels,
+        media_capture_(nb_channels, sample_rate,
                        std::bind(&MyApp::on_audio, this,
                                  std::placeholders::_1,
                                  std::placeholders::_2)) { }

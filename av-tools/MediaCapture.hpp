@@ -14,7 +14,7 @@ class MediaCapture final {
  public:
   using on_audio_cb = std::function<void(const unsigned char*, int)>;
 
-  MediaCapture(int sample_rate, int nb_channels, on_audio_cb&& on_audio);
+  MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio);
 
   ~MediaCapture();
 
