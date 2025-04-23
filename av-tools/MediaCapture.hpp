@@ -12,9 +12,18 @@
 
 class MediaCapture final {
  public:
-  using on_audio_cb = std::function<void(const unsigned char*, int)>;
+  struct Frame {
+    int width;
+    int height;
+    unsigned char* planes[3];
+    int strides[3];
+  };
 
-  MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio);
+  using on_audio_cb = std::function<void(const unsigned char*, int)>;
+  using on_video_cb = std::function<void(const Frame&)>;
+
+  MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio,
+               on_video_cb&& on_video);
 
   ~MediaCapture();
 

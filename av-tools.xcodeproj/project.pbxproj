@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D935A1E12DB79A0800F75AFD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D935A1E02DB79A0800F75AFD /* CoreVideo.framework */; };
 		D944B5F82DAF8A4A00ECACAB /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */; };
 		D952E6CD2DAF4E2B00C95FB1 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */; };
 		D9894F6E2DB7435500E310AC /* libswresample.5.3.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9894F662DB7435500E310AC /* libswresample.5.3.100.dylib */; };
@@ -32,6 +33,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D935A1E02DB79A0800F75AFD /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		D9853C872D55ADF800D4BBEA /* av-tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "av-tools"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -67,6 +69,7 @@
 				D9894F722DB7435500E310AC /* libavdevice.61.3.100.dylib in Frameworks */,
 				D9894F762DB7435500E310AC /* libavutil.59.39.100.dylib in Frameworks */,
 				D952E6CD2DAF4E2B00C95FB1 /* AVFoundation.framework in Frameworks */,
+				D935A1E12DB79A0800F75AFD /* CoreVideo.framework in Frameworks */,
 				D9894F7A2DB7435500E310AC /* libavformat.61.7.100.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +97,7 @@
 		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D935A1E02DB79A0800F75AFD /* CoreVideo.framework */,
 				D9894F672DB7435500E310AC /* libavcodec.61.19.101.dylib */,
 				D9894F682DB7435500E310AC /* libavdevice.61.3.100.dylib */,
 				D9894F6B2DB7435500E310AC /* libavfilter.10.4.100.dylib */,

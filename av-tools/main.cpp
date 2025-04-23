@@ -28,7 +28,9 @@ class MyApp {
         media_capture_(nb_channels, sample_rate,
                        std::bind(&MyApp::on_audio, this,
                                  std::placeholders::_1,
-                                 std::placeholders::_2)) { }
+                                 std::placeholders::_2),
+                       std::bind(&MyApp::on_video, this,
+                                 std::placeholders::_1)) { }
 
   virtual ~MyApp() = default;
 
@@ -39,6 +41,10 @@ class MyApp {
  private:
   void on_audio(const unsigned char* data, int samples) {
     av_streamer_write_samples(streamer_.get(), data, samples);
+  }
+
+  void on_video(const MediaCapture::Frame& frame) {
+    // XXX TODO
   }
 
   std::unique_ptr<av_streamer_t, decltype(&av_streamer_free)> streamer_;
