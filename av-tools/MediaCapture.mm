@@ -12,10 +12,15 @@
 @interface MediaCaptureImpl : NSObject <AVCaptureAudioDataOutputSampleBufferDelegate,
                                         AVCaptureVideoDataOutputSampleBufferDelegate>
 
-- (instancetype)initWithChannelNum:(int) channelNum
-                    withSampleRate:(int) sampleRate
-                       withAudioCb:(MediaCapture::on_audio_cb &&) audioCb
-                       withVideoCb:(MediaCapture::on_video_cb &&) videoCb;
+- (instancetype)init NS_UNAVAILABLE;
+
+- (instancetype)initWithChannelNum:(int)channelNum
+                    withSampleRate:(int)sampleRate
+                    withVideoWidth:(int)videoWidth
+                   withVideoHeight:(int)videoHeight
+                     withFrameRate:(int)frameRate
+                       withAudioCb:(MediaCapture::on_audio_cb &&)audioCb
+                       withVideoCb:(MediaCapture::on_video_cb &&)videoCb;
 
 - (void)start;
 
@@ -33,10 +38,13 @@
   MediaCapture::on_video_cb _videoCb;
 }
 
-- (instancetype)initWithChannelNum:(int) channelNum
-                    withSampleRate:(int) sampleRate
-                       withAudioCb:(MediaCapture::on_audio_cb &&) audioCb
-                       withVideoCb:(MediaCapture::on_video_cb &&) videoCb {
+- (instancetype)initWithChannelNum:(int)channelNum
+                    withSampleRate:(int)sampleRate
+                    withVideoWidth:(int)videoWidth
+                   withVideoHeight:(int)videoHeight
+                     withFrameRate:(int)frameRate
+                       withAudioCb:(MediaCapture::on_audio_cb &&)audioCb
+                       withVideoCb:(MediaCapture::on_video_cb &&)videoCb {
   self = [super init];
 
   if (self) {
@@ -65,6 +73,35 @@
     AVCaptureDevice *videoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     if (!videoDevice) {
       NSLog(@"No available video device");
+      return nil;
+    }
+
+    BOOL videoConfSupported = NO;
+    if ([videoDevice lockForConfiguration:&err]) {
+      for (AVCaptureDeviceFormat *format in videoDevice.formats) {
+        CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+        if (dimensions.width == videoWidth && dimensions.height == videoHeight) {
+          CMTime targetFrameDuration = CMTimeMake(1, frameRate);
+          for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
+            if (CMTimeCompare(targetFrameDuration, range.minFrameDuration) >= 0 &&
+                CMTimeCompare(targetFrameDuration, range.maxFrameDuration) <= 0) {
+              videoDevice.activeFormat = format;
+              [videoDevice setActiveVideoMinFrameDuration:targetFrameDuration];
+              [videoDevice setActiveVideoMaxFrameDuration:targetFrameDuration];
+              videoConfSupported = YES;
+              break;
+            }
+          }
+        }
+        if (videoConfSupported) { break; }
+      }
+      [videoDevice unlockForConfiguration];
+    } else {
+      NSLog(@"Fail to lock video device for configuration: %@", err.localizedDescription);
+      return nil;
+    }
+    if (!videoConfSupported) {
+      NSLog(@"Video config not supported");
       return nil;
     }
 
@@ -174,10 +211,13 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 struct MediaCapture::Impl final {
   __strong MediaCaptureImpl* instance;
 
-  Impl(int nb_channels, int sample_rate, on_audio_cb&& on_audio,
-       on_video_cb&& on_video)
+  Impl(int nb_channels, int sample_rate, int width, int height, int frame_rate,
+       on_audio_cb&& on_audio, on_video_cb&& on_video)
       : instance([[MediaCaptureImpl alloc] initWithChannelNum:nb_channels
                                                withSampleRate:sample_rate
+                                               withVideoWidth:width
+                                              withVideoHeight:height
+                                                withFrameRate:frame_rate
                                                   withAudioCb:(std::move(on_audio))
                                                   withVideoCb:(std::move(on_video))]) {
     if (!instance) {
@@ -188,10 +228,12 @@ struct MediaCapture::Impl final {
   ~Impl() = default;
 };
 
-MediaCapture::MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio,
-                           on_video_cb&& on_video)
-    : impl_(std::make_unique<Impl>(nb_channels, sample_rate, std::move(on_audio),
-                                   std::move(on_video))) { }
+MediaCapture::MediaCapture(int nb_channels, int sample_rate,
+                           int width, int height, int frame_rate,
+                           on_audio_cb&& on_audio, on_video_cb&& on_video)
+    : impl_(std::make_unique<Impl>(nb_channels, sample_rate,
+                                   width, height, frame_rate,
+                                   std::move(on_audio), std::move(on_video))) { }
 
 MediaCapture::~MediaCapture() = default;
 

@@ -15,6 +15,9 @@
 
 #define NB_CHANNELS 2
 #define SAMPLE_RATE 44100
+#define VIDEO_WIDTH 1280
+#define VIDEO_HEIGHT 720
+#define FRAME_RATE 30
 
 using std::cout;
 using std::cerr;
@@ -22,10 +25,11 @@ using std::endl;
 
 class MyApp {
  public:
-  MyApp(const char* url, int nb_channels, int sample_rate)
-      : streamer_(av_streamer_alloc(url, nb_channels, sample_rate),
+  MyApp(const char* url)
+      : streamer_(av_streamer_alloc(url, NB_CHANNELS, SAMPLE_RATE),
                   &av_streamer_free),
-        media_capture_(nb_channels, sample_rate,
+        media_capture_(NB_CHANNELS, SAMPLE_RATE,
+                       VIDEO_WIDTH, VIDEO_HEIGHT, FRAME_RATE,
                        std::bind(&MyApp::on_audio, this,
                                  std::placeholders::_1,
                                  std::placeholders::_2),
@@ -58,7 +62,7 @@ int main(int argc, char* argv[]) {
   }
 
   try {
-    MyApp app(argv[1], NB_CHANNELS, SAMPLE_RATE);
+    MyApp app(argv[1]);
 
     app.start();
 

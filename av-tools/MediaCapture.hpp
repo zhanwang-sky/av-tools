@@ -22,8 +22,9 @@ class MediaCapture final {
   using on_audio_cb = std::function<void(const unsigned char*, int)>;
   using on_video_cb = std::function<void(const Frame&)>;
 
-  MediaCapture(int nb_channels, int sample_rate, on_audio_cb&& on_audio,
-               on_video_cb&& on_video);
+  MediaCapture(int nb_channels, int sample_rate,
+               int width, int height, int frame_rate,
+               on_audio_cb&& on_audio, on_video_cb&& on_video);
 
   ~MediaCapture();
 
