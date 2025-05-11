@@ -128,7 +128,9 @@
 
     // Video settings
     NSDictionary *videoSettings = @{
-      (id) kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8Planar)
+      (id) kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8Planar),
+      (id) kCVPixelBufferWidthKey: @(videoWidth),
+      (id) kCVPixelBufferHeightKey: @(videoHeight),
     };
     [_videoOutput setVideoSettings:videoSettings];
 
