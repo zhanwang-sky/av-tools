@@ -12,15 +12,8 @@
 
 class MediaCapture final {
  public:
-  struct Frame {
-    int width;
-    int height;
-    unsigned char* planes[3];
-    int strides[3];
-  };
-
-  using on_audio_cb = std::function<void(const unsigned char*, int)>;
-  using on_video_cb = std::function<void(const Frame&)>;
+  using on_audio_cb = std::function<void(unsigned char*, int)>; // S16
+  using on_video_cb = std::function<void(unsigned char* planes[], int strides[])>; // I420
 
   MediaCapture(int nb_channels, int sample_rate,
                int width, int height, int frame_rate,

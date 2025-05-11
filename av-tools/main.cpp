@@ -34,7 +34,8 @@ class MyApp {
                                  std::placeholders::_1,
                                  std::placeholders::_2),
                        std::bind(&MyApp::on_video, this,
-                                 std::placeholders::_1)) { }
+                                 std::placeholders::_1,
+                                 std::placeholders::_2)) { }
 
   virtual ~MyApp() = default;
 
@@ -43,11 +44,11 @@ class MyApp {
   inline void stop() { media_capture_.stop(); }
 
  private:
-  void on_audio(const unsigned char* data, int samples) {
+  void on_audio(unsigned char* data, int samples) {
     av_streamer_write_samples(streamer_.get(), data, samples);
   }
 
-  void on_video(const MediaCapture::Frame& frame) {
+  void on_video(unsigned char* planes[], int strides[]) {
     // XXX TODO
   }
 

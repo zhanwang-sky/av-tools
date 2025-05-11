@@ -7,6 +7,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <stdexcept>
+#import <utility>
 #import "MediaCapture.hpp"
 
 @interface MediaCaptureImpl : NSObject <AVCaptureAudioDataOutputSampleBufferDelegate,
@@ -183,26 +184,23 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
       char *data;
       if (CMBlockBufferGetDataPointer(blockBuffer, 0, NULL, NULL, &data) == kCMBlockBufferNoErr) {
         CMItemCount samples = CMSampleBufferGetNumSamples(sampleBuffer);
-        _audioCb((const unsigned char*) data, (int) samples);
+        _audioCb((unsigned char *) data, (int) samples);
       }
     }
   } else if (output == _videoOutput) {
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    CVPixelBufferLockBaseAddress(imageBuffer, 0);
-
-    MediaCapture::Frame frame;
-    frame.width = (int) CVPixelBufferGetWidth(imageBuffer);
-    frame.height = (int) CVPixelBufferGetHeight(imageBuffer);
-    frame.planes[0] = (unsigned char *) CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
-    frame.planes[1] = (unsigned char *) CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 1);
-    frame.planes[2] = (unsigned char *) CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 2);
-    frame.strides[0] = (int) CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0);
-    frame.strides[1] = (int) CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 1);
-    frame.strides[2] = (int) CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 2);
-
-    _videoCb(frame);
-
-    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+    if (imageBuffer) {
+      unsigned char *planes[3] = {NULL};
+      int strides[3] = {0};
+      size_t planeCount = CVPixelBufferGetPlaneCount(imageBuffer);
+      CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+      for (size_t i = 0; i != 3 && i < planeCount; ++i) {
+        planes[i] = (unsigned char *) CVPixelBufferGetBaseAddressOfPlane(imageBuffer, i);
+        strides[i] = (int) CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, i);
+      }
+      _videoCb(planes, strides);
+      CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+    }
   }
 }
 
@@ -233,7 +231,8 @@ MediaCapture::MediaCapture(int nb_channels, int sample_rate,
                            on_audio_cb&& on_audio, on_video_cb&& on_video)
     : impl_(std::make_unique<Impl>(nb_channels, sample_rate,
                                    width, height, frame_rate,
-                                   std::move(on_audio), std::move(on_video))) { }
+                                   std::move(on_audio),
+                                   std::move(on_video))) { }
 
 MediaCapture::~MediaCapture() = default;
 
