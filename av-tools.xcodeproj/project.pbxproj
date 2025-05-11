@@ -18,6 +18,7 @@
 		D9894F782DB7435500E310AC /* libavfilter.10.4.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9894F6B2DB7435500E310AC /* libavfilter.10.4.100.dylib */; };
 		D9894F7A2DB7435500E310AC /* libavformat.61.7.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9894F6C2DB7435500E310AC /* libavformat.61.7.100.dylib */; };
 		D9894F7C2DB7435500E310AC /* libpostproc.58.3.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9894F6D2DB7435500E310AC /* libpostproc.58.3.100.dylib */; };
+		D9E274CA2DD0A50000E5887A /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9E274C92DD0A50000E5887A /* libwebrtc.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -45,6 +46,7 @@
 		D9894F6B2DB7435500E310AC /* libavfilter.10.4.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavfilter.10.4.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libavfilter.10.4.100.dylib; sourceTree = "<group>"; };
 		D9894F6C2DB7435500E310AC /* libavformat.61.7.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.61.7.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libavformat.61.7.100.dylib; sourceTree = "<group>"; };
 		D9894F6D2DB7435500E310AC /* libpostproc.58.3.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpostproc.58.3.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libpostproc.58.3.100.dylib; sourceTree = "<group>"; };
+		D9E274C92DD0A50000E5887A /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebrtc.a; path = "/opt/webrtc/src/out/Default/obj/libwebrtc.a"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,17 +62,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D9894F782DB7435500E310AC /* libavfilter.10.4.100.dylib in Frameworks */,
-				D944B5F82DAF8A4A00ECACAB /* CoreMedia.framework in Frameworks */,
-				D9894F7C2DB7435500E310AC /* libpostproc.58.3.100.dylib in Frameworks */,
-				D9894F742DB7435500E310AC /* libswscale.8.3.100.dylib in Frameworks */,
-				D9894F702DB7435500E310AC /* libavcodec.61.19.101.dylib in Frameworks */,
-				D9894F6E2DB7435500E310AC /* libswresample.5.3.100.dylib in Frameworks */,
-				D9894F722DB7435500E310AC /* libavdevice.61.3.100.dylib in Frameworks */,
-				D9894F762DB7435500E310AC /* libavutil.59.39.100.dylib in Frameworks */,
 				D952E6CD2DAF4E2B00C95FB1 /* AVFoundation.framework in Frameworks */,
+				D944B5F82DAF8A4A00ECACAB /* CoreMedia.framework in Frameworks */,
 				D935A1E12DB79A0800F75AFD /* CoreVideo.framework in Frameworks */,
+				D9894F702DB7435500E310AC /* libavcodec.61.19.101.dylib in Frameworks */,
+				D9894F722DB7435500E310AC /* libavdevice.61.3.100.dylib in Frameworks */,
+				D9894F782DB7435500E310AC /* libavfilter.10.4.100.dylib in Frameworks */,
 				D9894F7A2DB7435500E310AC /* libavformat.61.7.100.dylib in Frameworks */,
+				D9894F762DB7435500E310AC /* libavutil.59.39.100.dylib in Frameworks */,
+				D9894F7C2DB7435500E310AC /* libpostproc.58.3.100.dylib in Frameworks */,
+				D9894F6E2DB7435500E310AC /* libswresample.5.3.100.dylib in Frameworks */,
+				D9894F742DB7435500E310AC /* libswscale.8.3.100.dylib in Frameworks */,
+				D9E274CA2DD0A50000E5887A /* libwebrtc.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,6 +100,7 @@
 		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D9E274C92DD0A50000E5887A /* libwebrtc.a */,
 				D935A1E02DB79A0800F75AFD /* CoreVideo.framework */,
 				D9894F672DB7435500E310AC /* libavcodec.61.19.101.dylib */,
 				D9894F682DB7435500E310AC /* libavdevice.61.3.100.dylib */,
@@ -302,8 +306,14 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++23";
 				CODE_SIGN_STYLE = Automatic;
 				GCC_C_LANGUAGE_STANDARD = c17;
-				HEADER_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/include;
-				LIBRARY_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib;
+				HEADER_SEARCH_PATHS = (
+					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/include,
+					/opt/webrtc/src,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib,
+					/opt/webrtc/src/out/Default/obj,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -314,8 +324,14 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++23";
 				CODE_SIGN_STYLE = Automatic;
 				GCC_C_LANGUAGE_STANDARD = c17;
-				HEADER_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/include;
-				LIBRARY_SEARCH_PATHS = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib;
+				HEADER_SEARCH_PATHS = (
+					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/include,
+					/opt/webrtc/src,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib,
+					/opt/webrtc/src/out/Default/obj,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
