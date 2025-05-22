@@ -7,9 +7,13 @@
 
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
+
+#include <libyuv.h>
+
 #include "av_streamer.h"
 #include "MediaCapture.hpp"
 
@@ -25,7 +29,7 @@ using std::endl;
 
 class MyApp {
  public:
-  MyApp(const char* url)
+  MyApp(const char* url, const char* ppm_path)
       : streamer_(av_streamer_alloc(url, NB_CHANNELS, SAMPLE_RATE),
                   &av_streamer_free),
         media_capture_(NB_CHANNELS, SAMPLE_RATE,
@@ -35,7 +39,12 @@ class MyApp {
                                  std::placeholders::_2),
                        std::bind(&MyApp::on_video, this,
                                  std::placeholders::_1,
-                                 std::placeholders::_2)) { }
+                                 std::placeholders::_2)),
+        ppm_(ppm_path, std::fstream::binary | std::fstream::trunc) {
+    if (!ppm_) {
+      throw std::runtime_error("fail to open ppm file for writing");
+    }
+  }
 
   virtual ~MyApp() = default;
 
@@ -49,21 +58,36 @@ class MyApp {
   }
 
   void on_video(unsigned char* planes[], int strides[]) {
-    // XXX TODO
+    if (ppm_.is_open()) {
+      if (++frame_cnt_ == 10) {
+        std::vector<uint8_t> rgb24_buf(VIDEO_WIDTH * VIDEO_HEIGHT * 3);
+        libyuv::I420ToRGB24Matrix(planes[0], strides[0],
+                                  planes[2], strides[2],
+                                  planes[1], strides[1],
+                                  rgb24_buf.data(), VIDEO_WIDTH * 3,
+                                  &libyuv::kYuvH709ConstantsVU,
+                                  VIDEO_WIDTH, VIDEO_HEIGHT);
+        ppm_ << "P6\n" << VIDEO_WIDTH << " " << VIDEO_HEIGHT << "\n255\n";
+        ppm_.write((const char*) rgb24_buf.data(), rgb24_buf.size());
+        ppm_.close();
+      }
+    }
   }
 
   std::unique_ptr<av_streamer_t, decltype(&av_streamer_free)> streamer_;
   MediaCapture media_capture_;
+  std::ofstream ppm_;
+  int frame_cnt_ = 0;
 };
 
 int main(int argc, char* argv[]) {
-  if (argc != 2) {
-    cerr << "Usage: ./av-tools <url>\n";
+  if (argc != 3) {
+    cerr << "Usage: ./av-tools <sample.flv> <sample.ppm>\n";
     exit(EXIT_FAILURE);
   }
 
   try {
-    MyApp app(argv[1]);
+    MyApp app(argv[1], argv[2]);
 
     app.start();
 

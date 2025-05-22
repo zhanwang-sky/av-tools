@@ -46,7 +46,7 @@
 		D9894F6B2DB7435500E310AC /* libavfilter.10.4.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavfilter.10.4.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libavfilter.10.4.100.dylib; sourceTree = "<group>"; };
 		D9894F6C2DB7435500E310AC /* libavformat.61.7.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.61.7.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libavformat.61.7.100.dylib; sourceTree = "<group>"; };
 		D9894F6D2DB7435500E310AC /* libpostproc.58.3.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpostproc.58.3.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib/libpostproc.58.3.100.dylib; sourceTree = "<group>"; };
-		D9E274C92DD0A50000E5887A /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebrtc.a; path = "/opt/webrtc/src/out/Default/obj/libwebrtc.a"; sourceTree = "<group>"; };
+		D9E274C92DD0A50000E5887A /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebrtc.a; path = /opt/webrtc/src/out/Default/obj/libwebrtc.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -308,7 +308,7 @@
 				GCC_C_LANGUAGE_STANDARD = c17;
 				HEADER_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/include,
-					/opt/webrtc/src,
+					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib,
@@ -326,7 +326,7 @@
 				GCC_C_LANGUAGE_STANDARD = c17;
 				HEADER_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/include,
-					/opt/webrtc/src,
+					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_2/lib,
