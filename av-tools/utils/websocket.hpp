@@ -41,7 +41,8 @@ class Websocket {
             std::string_view host, std::string_view port, std::string_view url,
             const std::map<std::string, std::string>& headers)
       : io_(io),
-        resolver_(boost::asio::make_strand(io)),
+        strand_(boost::asio::make_strand(io)),
+        resolver_(strand_),
         ssl_(ssl_context::tlsv12_client),
         host_(host),
         port_(port),
@@ -51,7 +52,7 @@ class Websocket {
     ssl_.set_verify_mode(boost::asio::ssl::verify_peer);
     ssl_.set_default_verify_paths();
 
-    ws_ = std::make_unique<wss_stream>(boost::asio::make_strand(io_), ssl_);
+    ws_ = std::make_unique<wss_stream>(strand_, ssl_);
 
     if (!SSL_set_tlsext_host_name(ws_->next_layer().native_handle(), host_.c_str())) {
       throw std::runtime_error("SSL: error setting SNI");
@@ -198,6 +199,7 @@ class Websocket {
   }
 
   io_context& io_;
+  decltype(boost::asio::make_strand(io_)) strand_;
   tcp_resolver resolver_;
   ssl_context ssl_;
   std::unique_ptr<wss_stream> ws_;
