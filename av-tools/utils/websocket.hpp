@@ -16,7 +16,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -38,7 +37,7 @@ class Websocket {
 
  public:
   Websocket(io_context& io,
-            std::string_view host, std::string_view port, std::string_view url,
+            const std::string& host, const std::string& port, const std::string& url,
             const std::map<std::string, std::string>& headers)
       : io_(io),
         strand_(boost::asio::make_strand(io)),
@@ -70,7 +69,7 @@ class Websocket {
                                       std::placeholders::_2));
   }
 
-  void send(std::string_view msg) {
+  void send(const std::string& msg) {
     ws_->async_write(boost::asio::buffer(msg),
                      std::bind(&Websocket::on_write,
                                this,
@@ -88,7 +87,7 @@ class Websocket {
 
   virtual void on_close() = 0;
 
-  virtual void on_message(std::string_view msg) = 0;
+  virtual void on_message(const std::string& msg) = 0;
 
   virtual void on_error(const std::exception& e) = 0;
 
@@ -168,8 +167,8 @@ class Websocket {
       return;
     }
 
-    auto cdata = buffer_.cdata();
-    std::string_view msg(static_cast<const char*>(cdata.data()), cdata.size());
+    auto cbuf = buffer_.cdata();
+    std::string msg(static_cast<const char*>(cbuf.data()), cbuf.size());
     on_message(msg);
     buffer_.consume(buffer_.size());
 
