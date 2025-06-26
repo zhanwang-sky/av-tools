@@ -25,6 +25,8 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 
+namespace av {
+
 namespace utils {
 
 class Websocket {
@@ -211,5 +213,7 @@ class Websocket {
 };
 
 } // utils
+
+} // av
 
 #endif /* websocket_hpp */
