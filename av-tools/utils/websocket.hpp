@@ -11,7 +11,6 @@
 /// https://websocket-client.readthedocs.io/en/latest/app.html
 
 #include <chrono>
-#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -29,10 +28,10 @@ namespace av {
 
 namespace utils {
 
-class Websocket {
+class Websocket : public std::enable_shared_from_this<Websocket> {
   using io_context = boost::asio::io_context;
-  using ssl_context = boost::asio::ssl::context;
   using tcp_resolver = boost::asio::ip::tcp::resolver;
+  using ssl_context = boost::asio::ssl::context;
   using tcp_stream = boost::beast::tcp_stream;
   using ssl_stream = boost::asio::ssl::stream<tcp_stream>;
   using wss_stream = boost::beast::websocket::stream<ssl_stream>;
@@ -65,24 +64,20 @@ class Websocket {
 
   void run() {
     resolver_.async_resolve(host_, port_,
-                            std::bind(&Websocket::on_resolve,
-                                      this,
-                                      std::placeholders::_1,
-                                      std::placeholders::_2));
+                            boost::beast::bind_front_handler(&Websocket::on_resolve,
+                                                             shared_from_this()));
   }
 
   void send(const std::string& msg) {
     ws_->async_write(boost::asio::buffer(msg),
-                     std::bind(&Websocket::on_write,
-                               this,
-                               std::placeholders::_1));
+                     boost::beast::bind_front_handler(&Websocket::on_write,
+                                                      shared_from_this()));
   }
 
   void close() {
     ws_->async_close(boost::beast::websocket::close_code::normal,
-                     std::bind(&Websocket::on_disconnect,
-                               this,
-                               std::placeholders::_1));
+                     boost::beast::bind_front_handler(&Websocket::on_disconnect,
+                                                      shared_from_this()));
   }
 
   virtual void on_open() = 0;
@@ -99,37 +94,36 @@ class Websocket {
   Websocket& operator=(Websocket&&) = delete;
 
  private:
-  void on_resolve(const boost::system::error_code& error,
-                  tcp_resolver::results_type results) {
-    if (error) {
-      on_error(std::runtime_error(error.message()));
+  void on_resolve(const boost::system::error_code& ec,
+                  const tcp_resolver::results_type& results) {
+    if (ec) {
+      on_error(std::runtime_error(ec.message()));
       return;
     }
 
     auto& lowest_layer = boost::beast::get_lowest_layer(*ws_);
     lowest_layer.expires_after(std::chrono::seconds(30));
     lowest_layer.async_connect(results,
-                               std::bind(&Websocket::on_connect,
-                                         this,
-                                         std::placeholders::_1));
+                               boost::beast::bind_front_handler(&Websocket::on_connect,
+                                                                shared_from_this()));
   }
 
-  void on_connect(const boost::system::error_code& error) {
-    if (error) {
-      on_error(std::runtime_error(error.message()));
+  void on_connect(const boost::system::error_code& ec,
+                  const tcp_resolver::results_type::endpoint_type&) {
+    if (ec) {
+      on_error(std::runtime_error(ec.message()));
       return;
     }
 
     boost::beast::get_lowest_layer(*ws_).expires_after(std::chrono::seconds(30));
     ws_->next_layer().async_handshake(boost::asio::ssl::stream_base::client,
-                                      std::bind(&Websocket::on_ssl_handshake,
-                                                this,
-                                                std::placeholders::_1));
+                                      boost::beast::bind_front_handler(&Websocket::on_ssl_handshake,
+                                                                       shared_from_this()));
   }
 
-  void on_ssl_handshake(const boost::system::error_code& error) {
-    if (error) {
-      on_error(std::runtime_error(error.message()));
+  void on_ssl_handshake(const boost::system::error_code& ec) {
+    if (ec) {
+      on_error(std::runtime_error(ec.message()));
       return;
     }
 
@@ -139,6 +133,7 @@ class Websocket {
     ws_->set_option(suggested(boost::beast::role_type::client));
 
     ws_->set_option(boost::beast::websocket::stream_base::decorator(
+      // XXX TODO: this?
       [this](boost::beast::websocket::request_type& req) {
         for (const auto& h : headers_) {
           req.set(h.first, h.second);
@@ -147,12 +142,11 @@ class Websocket {
 
     auto host_port = host_ + ":" + port_;
     ws_->async_handshake(host_port, url_,
-                         std::bind(&Websocket::on_handshake,
-                                   this,
-                                   std::placeholders::_1));
+                         boost::beast::bind_front_handler(&Websocket::on_handshake,
+                                                          shared_from_this()));
   }
 
-  void on_handshake(const boost::beast::error_code& ec) {
+  void on_handshake(const boost::system::error_code& ec) {
     if (ec) {
       on_error(std::runtime_error(ec.message()));
       return;
@@ -163,7 +157,7 @@ class Websocket {
     async_read();
   }
 
-  void on_read(const boost::beast::error_code& ec, std::size_t/* nbytes*/) {
+  void on_read(const boost::system::error_code& ec, std::size_t) {
     if (ec) {
       on_error(std::runtime_error(ec.message()));
       return;
@@ -177,13 +171,13 @@ class Websocket {
     async_read();
   }
 
-  void on_write(const boost::beast::error_code& ec) {
+  void on_write(const boost::system::error_code& ec, std::size_t) {
     if (ec) {
       on_error(std::runtime_error(ec.message()));
     }
   }
 
-  void on_disconnect(const boost::beast::error_code& ec) {
+  void on_disconnect(const boost::system::error_code& ec) {
     if (ec) {
       on_error(std::runtime_error(ec.message()));
       return;
@@ -193,10 +187,8 @@ class Websocket {
   }
 
   inline void async_read() {
-    ws_->async_read(buffer_, std::bind(&Websocket::on_read,
-                                       this,
-                                       std::placeholders::_1,
-                                       std::placeholders::_2));
+    ws_->async_read(buffer_, boost::beast::bind_front_handler(&Websocket::on_read,
+                                                              shared_from_this()));
   }
 
   io_context& io_;
