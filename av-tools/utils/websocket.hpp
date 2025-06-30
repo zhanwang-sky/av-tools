@@ -13,6 +13,7 @@
 #include <chrono>
 #include <map>
 #include <memory>
+#include <queue>
 #include <stdexcept>
 #include <string>
 
@@ -69,9 +70,11 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void send(const std::string& msg) {
-    ws_->async_write(boost::asio::buffer(msg),
-                     boost::beast::bind_front_handler(&Websocket::on_write,
-                                                      shared_from_this()));
+    auto p_msg = std::make_shared<std::string>(msg);
+    boost::asio::post(strand_,
+                      boost::beast::bind_front_handler(&Websocket::on_post_send,
+                                                       shared_from_this(),
+                                                       p_msg));
   }
 
   void close() {
@@ -155,6 +158,10 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
     on_open();
 
     async_read();
+
+    async_write();
+
+    is_open_ = true;
   }
 
   void on_read(const boost::system::error_code& ec, std::size_t) {
@@ -174,7 +181,11 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   void on_write(const boost::system::error_code& ec, std::size_t) {
     if (ec) {
       on_error(std::runtime_error(ec.message()));
+      return;
     }
+
+    send_queue_.pop();
+    async_write();
   }
 
   void on_disconnect(const boost::system::error_code& ec) {
@@ -186,9 +197,26 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
     on_close();
   }
 
+  void on_post_send(std::shared_ptr<std::string> p_msg) {
+    bool idle = is_open_ && send_queue_.empty();
+    send_queue_.push(p_msg);
+    if (idle) {
+      async_write();
+    }
+  }
+
   inline void async_read() {
     ws_->async_read(buffer_, boost::beast::bind_front_handler(&Websocket::on_read,
                                                               shared_from_this()));
+  }
+
+  inline void async_write() {
+    if (!send_queue_.empty()) {
+      auto p_msg = send_queue_.front();
+      ws_->async_write(boost::asio::buffer(*p_msg),
+                       boost::beast::bind_front_handler(&Websocket::on_write,
+                                                        shared_from_this()));
+    }
   }
 
   io_context& io_;
@@ -197,6 +225,8 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   ssl_context ssl_;
   std::unique_ptr<wss_stream> ws_;
   boost::beast::flat_buffer buffer_;
+  std::queue<std::shared_ptr<std::string>> send_queue_;
+  bool is_open_ = false;
   // saved args
   const std::string host_;
   const std::string port_;
