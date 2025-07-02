@@ -9,6 +9,7 @@
 #include "ffmpeg_helper.hpp"
 #include "av_streamer.h"
 
+// XXX TODO: make configurable
 #define AAC_BITRATE (24 << 10)
 
 using namespace av::ffmpeg;

@@ -1,11 +1,12 @@
 //
-//  MyClass.hpp
+//  myclass.hpp
 //  av-tools
 //
 //  Created by zhanwang-sky on 2025/4/17.
 //
 
-#pragma once
+#ifndef myclass_hpp
+#define myclass_hpp
 
 #include <cstdio>
 
@@ -53,3 +54,5 @@ class MyClass {
     printf("MyClass - call on CONST rvalue: %p\n", this);
   }
 };
+
+#endif /* myclass_hpp */
