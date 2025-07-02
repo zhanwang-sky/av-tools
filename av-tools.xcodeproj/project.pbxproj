@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D92B56242DF819AF008CFB47 /* libssl.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D92B56222DF819AF008CFB47 /* libssl.3.dylib */; };
-		D92B56252DF819AF008CFB47 /* libcrypto.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D92B56232DF819AF008CFB47 /* libcrypto.3.dylib */; };
 		D935A1E12DB79A0800F75AFD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D935A1E02DB79A0800F75AFD /* CoreVideo.framework */; };
 		D944B5F82DAF8A4A00ECACAB /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */; };
 		D952E6CD2DAF4E2B00C95FB1 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */; };
+		D960288D2E15337A000DE468 /* libcrypto.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D960288B2E15337A000DE468 /* libcrypto.3.dylib */; };
+		D960288E2E15337A000DE468 /* libssl.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D960288C2E15337A000DE468 /* libssl.3.dylib */; };
 		D9E274CA2DD0A50000E5887A /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9E274C92DD0A50000E5887A /* libwebrtc.a */; };
 		D9EE786F2DE73D510092B817 /* libavformat.61.7.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EE78672DE73D510092B817 /* libavformat.61.7.100.dylib */; };
 		D9EE78702DE73D510092B817 /* libavfilter.10.4.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9EE78682DE73D510092B817 /* libavfilter.10.4.100.dylib */; };
@@ -36,11 +36,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D92B56222DF819AF008CFB47 /* libssl.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.0/lib/libssl.3.dylib"; sourceTree = "<group>"; };
-		D92B56232DF819AF008CFB47 /* libcrypto.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.0/lib/libcrypto.3.dylib"; sourceTree = "<group>"; };
 		D935A1E02DB79A0800F75AFD /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		D960288B2E15337A000DE468 /* libcrypto.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.1/lib/libcrypto.3.dylib"; sourceTree = "<group>"; };
+		D960288C2E15337A000DE468 /* libssl.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.1/lib/libssl.3.dylib"; sourceTree = "<group>"; };
 		D9853C872D55ADF800D4BBEA /* av-tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "av-tools"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9E274C92DD0A50000E5887A /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebrtc.a; path = /opt/webrtc/src/out/Default/obj/libwebrtc.a; sourceTree = "<group>"; };
 		D9EE78672DE73D510092B817 /* libavformat.61.7.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.61.7.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/7.1.1_3/lib/libavformat.61.7.100.dylib; sourceTree = "<group>"; };
@@ -74,11 +74,11 @@
 				D9EE78702DE73D510092B817 /* libavfilter.10.4.100.dylib in Frameworks */,
 				D9EE786F2DE73D510092B817 /* libavformat.61.7.100.dylib in Frameworks */,
 				D9EE78732DE73D510092B817 /* libavutil.59.39.100.dylib in Frameworks */,
+				D960288D2E15337A000DE468 /* libcrypto.3.dylib in Frameworks */,
 				D9EE78752DE73D510092B817 /* libpostproc.58.3.100.dylib in Frameworks */,
+				D960288E2E15337A000DE468 /* libssl.3.dylib in Frameworks */,
 				D9EE78722DE73D510092B817 /* libswresample.5.3.100.dylib in Frameworks */,
 				D9EE78712DE73D510092B817 /* libswscale.8.3.100.dylib in Frameworks */,
-				D92B56252DF819AF008CFB47 /* libcrypto.3.dylib in Frameworks */,
-				D92B56242DF819AF008CFB47 /* libssl.3.dylib in Frameworks */,
 				D9E274CA2DD0A50000E5887A /* libwebrtc.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -106,8 +106,8 @@
 		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D92B56232DF819AF008CFB47 /* libcrypto.3.dylib */,
-				D92B56222DF819AF008CFB47 /* libssl.3.dylib */,
+				D960288B2E15337A000DE468 /* libcrypto.3.dylib */,
+				D960288C2E15337A000DE468 /* libssl.3.dylib */,
 				D9EE786E2DE73D510092B817 /* libavcodec.61.19.101.dylib */,
 				D9EE786C2DE73D510092B817 /* libavdevice.61.3.100.dylib */,
 				D9EE78682DE73D510092B817 /* libavfilter.10.4.100.dylib */,
@@ -317,12 +317,12 @@
 				HEADER_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/boost/1.88.0/include,
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_3/include,
-					"/opt/homebrew/Cellar/openssl@3/3.5.0/include",
+					"/opt/homebrew/Cellar/openssl@3/3.5.1/include",
 					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_3/lib,
-					"/opt/homebrew/Cellar/openssl@3/3.5.0/lib",
+					"/opt/homebrew/Cellar/openssl@3/3.5.1/lib",
 					/opt/webrtc/src/out/Default/obj,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -338,12 +338,12 @@
 				HEADER_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/boost/1.88.0/include,
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_3/include,
-					"/opt/homebrew/Cellar/openssl@3/3.5.0/include",
+					"/opt/homebrew/Cellar/openssl@3/3.5.1/include",
 					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/7.1.1_3/lib,
-					"/opt/homebrew/Cellar/openssl@3/3.5.0/lib",
+					"/opt/homebrew/Cellar/openssl@3/3.5.1/lib",
 					/opt/webrtc/src/out/Default/obj,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
