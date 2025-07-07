@@ -63,10 +63,16 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
 
   virtual ~Websocket() { }
 
+ protected:
+  template <typename T>
+  std::shared_ptr<T> shared_from_base() {
+    return std::static_pointer_cast<T>(shared_from_this());
+  }
+
   void run() {
-    resolver_.async_resolve(host_, port_,
-                            boost::beast::bind_front_handler(&Websocket::on_resolve,
-                                                             shared_from_this()));
+    boost::asio::post(strand_,
+                      boost::beast::bind_front_handler(&Websocket::on_post_run,
+                                                       shared_from_this()));
   }
 
   void send(const std::string& msg) {
@@ -78,9 +84,9 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void close() {
-    ws_->async_close(boost::beast::websocket::close_code::normal,
-                     boost::beast::bind_front_handler(&Websocket::on_disconnect,
-                                                      shared_from_this()));
+    boost::asio::post(strand_,
+                      boost::beast::bind_front_handler(&Websocket::on_post_close,
+                                                       shared_from_this()));
   }
 
   virtual void on_open() = 0;
@@ -99,8 +105,7 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
  private:
   void on_resolve(const boost::system::error_code& ec,
                   const tcp_resolver::results_type& results) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
 
@@ -113,8 +118,7 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
 
   void on_connect(const boost::system::error_code& ec,
                   const tcp_resolver::results_type::endpoint_type&) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
 
@@ -125,8 +129,7 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void on_ssl_handshake(const boost::system::error_code& ec) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
 
@@ -136,7 +139,6 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
     ws_->set_option(suggested(boost::beast::role_type::client));
 
     ws_->set_option(boost::beast::websocket::stream_base::decorator(
-      // XXX TODO: this?
       [this](boost::beast::websocket::request_type& req) {
         for (const auto& h : headers_) {
           req.set(h.first, h.second);
@@ -150,23 +152,21 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void on_handshake(const boost::system::error_code& ec) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
+
+    open_ = 1;
 
     on_open();
 
     async_read();
 
     async_write();
-
-    is_open_ = true;
   }
 
   void on_read(const boost::system::error_code& ec, std::size_t) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
 
@@ -179,8 +179,7 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void on_write(const boost::system::error_code& ec, std::size_t) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
+    if (should_exit(ec)) {
       return;
     }
 
@@ -189,20 +188,53 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
   }
 
   void on_disconnect(const boost::system::error_code& ec) {
-    if (ec) {
-      on_error(std::runtime_error(ec.message()));
-      return;
-    }
+    close_ = 1;
 
     on_close();
   }
 
-  void on_post_send(std::shared_ptr<std::string> p_msg) {
-    bool idle = is_open_ && send_queue_.empty();
-    send_queue_.push(p_msg);
-    if (idle) {
-      async_write();
+  void on_post_run() {
+    if (open_ < 0 && close_ < 0) {
+      open_ = 0;
+      resolver_.async_resolve(host_, port_,
+                              boost::beast::bind_front_handler(&Websocket::on_resolve,
+                                                               shared_from_this()));
     }
+  }
+
+  void on_post_send(std::shared_ptr<std::string> p_msg) {
+    if (open_ >= 0 && close_ < 0) {
+      bool idle = send_queue_.empty();
+      send_queue_.push(p_msg);
+      if (idle) {
+        async_write();
+      }
+    }
+  }
+
+  void on_post_close() {
+    if (close_ < 0) {
+      close_ = 0;
+      resolver_.cancel();
+      ws_->async_close(boost::beast::websocket::close_code::normal,
+                       boost::beast::bind_front_handler(&Websocket::on_disconnect,
+                                                        shared_from_this()));
+    }
+  }
+
+  inline bool should_exit(const boost::system::error_code& ec) {
+    if (ec || close_ >= 0) {
+      if (ec) {
+        if (ec != boost::asio::error::operation_aborted &&
+            ec != boost::asio::error::eof &&
+            ec != boost::beast::websocket::error::closed) {
+          on_error(std::runtime_error(ec.message()));
+        }
+        on_post_close();
+      }
+      return true;
+    }
+    return false;
   }
 
   inline void async_read() {
@@ -219,14 +251,18 @@ class Websocket : public std::enable_shared_from_this<Websocket> {
     }
   }
 
+ protected:
   io_context& io_;
   decltype(boost::asio::make_strand(io_)) strand_;
+
+ private:
   tcp_resolver resolver_;
   ssl_context ssl_;
   std::unique_ptr<wss_stream> ws_;
   boost::beast::flat_buffer buffer_;
   std::queue<std::shared_ptr<std::string>> send_queue_;
-  bool is_open_ = false;
+  int open_ = -1;
+  int close_ = -1;
   // saved args
   const std::string host_;
   const std::string port_;
