@@ -1,12 +1,12 @@
 //
-//  myclass.hpp
+//  my_class.hpp
 //  av-tools
 //
 //  Created by zhanwang-sky on 2025/4/17.
 //
 
-#ifndef myclass_hpp
-#define myclass_hpp
+#ifndef my_class_hpp
+#define my_class_hpp
 
 #include <cstdio>
 
@@ -55,4 +55,4 @@ class MyClass {
   }
 };
 
-#endif /* myclass_hpp */
+#endif /* my_class_hpp */
