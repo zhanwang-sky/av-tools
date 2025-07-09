@@ -169,6 +169,7 @@ VolcTTS::VolcTTS(boost::asio::io_context& io, callback_type&& cb,
                          {"X-Api-Connect-Id", connect_id},
                        }),
       cb_(std::move(cb)),
+      connect_id_(connect_id),
       session_id_(session_id),
       speaker_(speaker)
 {
@@ -202,13 +203,13 @@ void VolcTTS::stop(bool force) {
 
 void VolcTTS::on_open() {
   state_ = 1;
-  cb_(EventConnOpen, "");
+  callback(EventConnOpen, "");
   start_connection();
 }
 
 void VolcTTS::on_close() {
   state_ = 7;
-  cb_(EventConnClose, "");
+  callback(EventConnClose, "");
 }
 
 void VolcTTS::on_message(const std::string& msg) {
@@ -228,14 +229,14 @@ void VolcTTS::on_message(const std::string& msg) {
         case Message::EventSessionStarted:
           if (state_ == 2) {
             state_ = 3;
-            cb_(EventTTSStart, volc_msg.payload);
+            callback(EventTTSStart, volc_msg.payload);
           }
           break;
 
         case Message::EventTTSSentenceStart:
         case Message::EventTTSSentenceEnd:
           if (state_ == 3) {
-            cb_(EventTTSMessage, volc_msg.payload);
+            callback(EventTTSMessage, volc_msg.payload);
           }
           break;
 
@@ -243,7 +244,7 @@ void VolcTTS::on_message(const std::string& msg) {
           if (state_ < 4) {
             state_ = 4;
             finish_connection();
-            cb_(EventTTSStop, volc_msg.payload);
+            callback(EventTTSStop, volc_msg.payload);
           }
           break;
 
@@ -259,7 +260,7 @@ void VolcTTS::on_message(const std::string& msg) {
           if (state_ < 7) {
             state_ = 6;
             on_post_stop(true);
-            cb_(EventTTSError, volc_msg.payload);
+            callback(EventTTSError, volc_msg.payload);
           }
           break;
 
@@ -272,7 +273,7 @@ void VolcTTS::on_message(const std::string& msg) {
         volc_msg.msg_flag == Message::MsgFlagWithEvent) {
       if (volc_msg.event == Message::EventTTSResponse) {
         if (state_ == 3) {
-          cb_(EventTTSAudio, volc_msg.payload);
+          callback(EventTTSAudio, volc_msg.payload);
         }
       }
     }
@@ -281,13 +282,13 @@ void VolcTTS::on_message(const std::string& msg) {
     if (state_ < 7) {
       state_ = 6;
       on_post_stop(true);
-      cb_(EventTTSError, "malformed tts message");
+      callback(EventTTSError, "malformed tts message");
     }
   }
 }
 
 void VolcTTS::on_error(const std::exception& e) {
-  cb_(EventConnError, e.what());
+  callback(EventConnError, e.what());
 }
 
 void VolcTTS::on_post_request(std::shared_ptr<std::string> p_text) {

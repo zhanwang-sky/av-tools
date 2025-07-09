@@ -77,7 +77,10 @@ class VolcTTS : public utils::Websocket {
     EventTTSAudio,
   };
 
-  using callback_type = std::function<void(Event, const std::string&)>;
+  using callback_type = std::function<void(const std::string& connect_id,
+                                           const std::string& session_id,
+                                           Event event,
+                                           const std::string& message)>;
 
   static constexpr const char* host = "openspeech.bytedance.com";
   static constexpr const char* url = "/api/v3/tts/bidirection";
@@ -124,7 +127,12 @@ class VolcTTS : public utils::Websocket {
   std::string make_json_payload(Message::Event event,
                                 std::shared_ptr<std::string> p_text = nullptr);
 
+  inline void callback(Event ev, const std::string& msg) {
+    cb_(connect_id_, session_id_, ev, msg);
+  }
+
   callback_type cb_;
+  std::string connect_id_;
   std::string session_id_;
   std::string speaker_;
   int state_ = 0;
