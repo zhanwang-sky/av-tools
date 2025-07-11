@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/7/9.
 //
 
-#ifndef av_net_websocket_hpp
-#define av_net_websocket_hpp
+#pragma once
 
 #include <memory>
 #include <queue>
@@ -215,5 +214,3 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
 } // net
 
 } // av
-
-#endif /* av_net_websocket_hpp */

@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/7/9.
 //
 
-#ifndef av_net_listener_hpp
-#define av_net_listener_hpp
+#pragma once
 
 #include <memory>
 #include <stdexcept>
@@ -85,5 +84,3 @@ class Listener : public std::enable_shared_from_this<Listener> {
 } // net
 
 } // av
-
-#endif /* av_net_listener_hpp */
