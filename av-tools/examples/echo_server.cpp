@@ -116,8 +116,7 @@ void EchoServer::on_session_event_cb(EchoSession *s,
       cerr << "Session<" << s << "> error: " << msg << endl;
     }
     auto self = shared_from_base<EchoServer>();
-    boost::asio::dispatch(get_executor(),
-                          [this, self, s]() { session_table_.erase(s); });
+    boost::asio::post(get_executor(), [this, self, s]() { session_table_.erase(s); });
   } else if (ev == EchoSession::EventOnOpen) {
     cout << "Session<" << s << "> opened\n";
   } else if (ev == EchoSession::EventOnMessage) {
