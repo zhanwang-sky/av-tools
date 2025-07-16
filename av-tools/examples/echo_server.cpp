@@ -60,8 +60,8 @@ void EchoSession::on_close_cb() {
   cb_(this, EventOnClose, "");
 }
 
-void EchoSession::on_message_cb(const std::string& msg) {
-  cb_(this, EventOnMessage, msg);
+void EchoSession::on_message_cb(std::string_view msg) {
+  cb_(this, EventOnMessage, std::string(msg));
 }
 
 void EchoSession::on_error_cb(const std::exception& e) {

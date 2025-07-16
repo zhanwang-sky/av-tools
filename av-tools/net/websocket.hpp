@@ -12,6 +12,7 @@
 #include <queue>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -36,8 +37,8 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   using ws_stream_base = boost::beast::websocket::stream_base;
 
   WSSCliSession(io_context& io, ssl_context& ssl,
-                const std::string& host, const std::string& port,
-                const std::string& url)
+                std::string_view host, std::string_view port,
+                std::string_view url)
       : resolver_(boost::asio::make_strand(io)),
         ws_(resolver_.get_executor(), ssl),
         host_(host),
@@ -69,7 +70,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
                                                            shared_from_this()));
   }
 
-  void send(const std::string& msg) {
+  void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::dispatch(ws_.get_executor(),
                           boost::beast::bind_front_handler(&WSSCliSession::on_post_send,
@@ -93,7 +94,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
 
   virtual void on_close_cb() = 0;
 
-  virtual void on_message_cb(const std::string& msg) = 0;
+  virtual void on_message_cb(std::string_view msg) = 0;
 
   virtual void on_error_cb(const std::exception& e) = 0;
 
@@ -195,7 +196,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
     }
 
     auto cbuf = buf_.cdata();
-    std::string msg(static_cast<const char*>(cbuf.data()), cbuf.size());
+    std::string_view msg(static_cast<const char*>(cbuf.data()), cbuf.size());
     on_message_cb(msg);
     buf_.consume(buf_.size());
 
@@ -287,7 +288,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
                                                            shared_from_this()));
   }
 
-  void send(const std::string& msg) {
+  void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::dispatch(ws_.get_executor(),
                           boost::beast::bind_front_handler(&WSSvrSession::on_post_send,
@@ -311,7 +312,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
 
   virtual void on_close_cb() = 0;
 
-  virtual void on_message_cb(const std::string& msg) = 0;
+  virtual void on_message_cb(std::string_view msg) = 0;
 
   virtual void on_error_cb(const std::exception& e) = 0;
 
@@ -393,7 +394,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
     }
 
     auto cbuf = buf_.cdata();
-    std::string msg(static_cast<const char*>(cbuf.data()), cbuf.size());
+    std::string_view msg(static_cast<const char*>(cbuf.data()), cbuf.size());
     on_message_cb(msg);
     buf_.consume(buf_.size());
 

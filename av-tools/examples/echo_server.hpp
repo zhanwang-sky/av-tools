@@ -40,7 +40,7 @@ class EchoSession : public av::net::WSSvrSession {
 
   virtual void on_close_cb() override;
 
-  virtual void on_message_cb(const std::string& msg) override;
+  virtual void on_message_cb(std::string_view msg) override;
 
   virtual void on_error_cb(const std::exception& e) override;
 
