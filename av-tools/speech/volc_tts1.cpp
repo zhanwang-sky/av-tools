@@ -6,7 +6,7 @@
 //
 
 #include <nlohmann/json.hpp>
-#include "volc_tts.hpp"
+#include "volc_tts1.hpp"
 
 using namespace nlohmann;
 using namespace av::speech;
