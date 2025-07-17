@@ -65,23 +65,23 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   }
 
   void run() {
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSCliSession::on_post_run,
-                                                           shared_from_this()));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSCliSession::on_post_run,
+                                                       shared_from_this()));
   }
 
   void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSCliSession::on_post_send,
-                                                           shared_from_this(),
-                                                           p_msg));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSCliSession::on_post_send,
+                                                       shared_from_this(),
+                                                       p_msg));
   }
 
   void close() {
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSCliSession::on_post_close,
-                                                           shared_from_this()));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSCliSession::on_post_close,
+                                                       shared_from_this()));
   }
 
   request_type& get_request_from_cb() { return req_; }
@@ -183,9 +183,9 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
       return;
     }
 
-    open_ = 1;
     on_open_cb();
 
+    open_ = 1;
     async_read();
     async_write();
   }
@@ -214,8 +214,8 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   }
 
   void on_disconnect(boost::beast::error_code) {
-    close_ = 1;
     on_close_cb();
+    close_ = 1;
   }
 
   inline void async_read() {
@@ -283,23 +283,23 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
   }
 
   void run() {
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSvrSession::on_post_run,
-                                                           shared_from_this()));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSvrSession::on_post_run,
+                                                       shared_from_this()));
   }
 
   void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSvrSession::on_post_send,
-                                                           shared_from_this(),
-                                                           p_msg));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSvrSession::on_post_send,
+                                                       shared_from_this(),
+                                                       p_msg));
   }
 
   void close() {
-    boost::asio::dispatch(ws_.get_executor(),
-                          boost::beast::bind_front_handler(&WSSvrSession::on_post_close,
-                                                           shared_from_this()));
+    boost::asio::post(ws_.get_executor(),
+                      boost::beast::bind_front_handler(&WSSvrSession::on_post_close,
+                                                       shared_from_this()));
   }
 
   request_type& get_request_from_cb() { return req_; }
@@ -376,16 +376,16 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
       return;
     }
 
-    open_ = 1;
     on_open_cb();
 
+    open_ = 1;
     async_read();
     async_write();
   }
 
   void on_disconnect(boost::beast::error_code) {
-    close_ = 1;
     on_close_cb();
+    close_ = 1;
   }
 
   void on_read(boost::beast::error_code ec, std::size_t) {
