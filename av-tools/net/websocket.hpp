@@ -173,7 +173,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
         }
       }
     }));
-    ws_.async_handshake(host_ + port_, url_,
+    ws_.async_handshake(resp_, host_ + ":" + port_, url_,
                         boost::beast::bind_front_handler(&WSSCliSession::on_handshake,
                                                          shared_from_this()));
   }
