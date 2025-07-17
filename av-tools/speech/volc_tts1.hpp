@@ -13,7 +13,7 @@
 
 namespace av {
 
-namespace speech {
+namespace speech1 {
 
 class VolcTTS : public utils::Websocket {
   struct Message {

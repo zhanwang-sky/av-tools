@@ -9,7 +9,7 @@
 #include "volc_tts1.hpp"
 
 using namespace nlohmann;
-using namespace av::speech;
+using namespace av::speech1;
 
 template <typename T>
 inline std::size_t writeBigEndian(std::string& data, T val) {

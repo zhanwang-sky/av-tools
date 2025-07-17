@@ -7,28 +7,56 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <thread>
 
-#include "LiveStreamer.hpp"
+#include "volc_tts.hpp"
 
+using namespace av::speech;
 using std::cout;
 using std::cerr;
 using std::endl;
 
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    cerr << "Usage: ./av-tools <sample.flv> <sample.ppm>\n";
+  if (argc != 4) {
+    cerr << "Usage: ./av-tools <appid> <token> <resid>\n";
     exit(EXIT_FAILURE);
   }
 
+  const char* appid = argv[1];
+  const char* token = argv[2];
+  const char* resid = argv[3];
+
   try {
-    LiveStreamer streamer(argv[1], argv[2]);
+    boost::asio::io_context io;
+    auto work_guard = boost::asio::make_work_guard(io);
 
-    streamer.start();
+    auto event_handler = [](VolcTTS::Event ev, std::string_view msg, std::string_view id) {
+      std::ostringstream oss;
 
-    cout << "press Enter to exit...";
-    std::cin.get();
+      oss << "event: " << ev;
+      if (!id.empty()) {
+        oss << ", id: " << id;
+      }
+      if (!msg.empty()) {
+        oss << ", msg: " << msg;
+      }
+      oss << endl;
 
-    streamer.stop();
+      cout << oss.str();
+    };
+
+    auto tts = VolcTTS::createVolcTTS(io, appid, token, resid, event_handler);
+
+    auto t = std::thread([&tts, guard = std::move(work_guard)]() {
+      tts->connect();
+      std::this_thread::sleep_for(std::chrono::seconds(3));
+      tts->teardown();
+    });
+
+    io.run();
+
+    t.join();
 
   } catch (const std::exception& e) {
     cerr << "Exception caught: " << e.what() << endl;
