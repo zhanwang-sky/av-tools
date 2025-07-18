@@ -51,7 +51,7 @@ class VolcTTS : public net::WSSCliSession {
 
   void teardown();
 
-  void start_session(std::string_view session_id);
+  void start_session(std::string_view id, std::string_view speaker);
 
   void stop_session();
 
@@ -62,11 +62,20 @@ class VolcTTS : public net::WSSCliSession {
 
   void on_post_teardown();
 
-  void on_post_start(std::shared_ptr<std::string> p_id);
+  void on_post_start(std::shared_ptr<std::string> p_id,
+                     std::shared_ptr<std::string> p_speaker);
 
   void on_post_stop();
 
   void on_post_request(std::shared_ptr<std::string> p_text);
+
+  void tts_start_connection();
+
+  void tts_start_session();
+
+  void tts_stop_session();
+
+  void tts_send_request(std::shared_ptr<std::string> p_text);
 
   virtual bool on_handshake_cb() override;
 
@@ -83,6 +92,8 @@ class VolcTTS : public net::WSSCliSession {
   std::string resid_;
   std::string logid_;
   callback_type cb_;
+  std::shared_ptr<std::string> p_sess_id_;
+  std::shared_ptr<std::string> p_speaker_;
   int state_ = 0;
   // 0. init
   // 1. connecting    (transient)

@@ -5,6 +5,7 @@
 //  Created by zhanwang-sky on 2025/7/16.
 //
 
+#include <nlohmann/json.hpp>
 #include "volc_tts.hpp"
 
 using namespace av::speech;
@@ -102,6 +103,29 @@ struct VolcTTS::Message {
     return sizeof(T) + len;
   }
 
+  static nlohmann::json
+  make_json_payload(Event event,
+                    std::shared_ptr<std::string> p_speaker = nullptr,
+                    std::shared_ptr<std::string> p_text = nullptr) {
+    nlohmann::json root;
+    root["event"] = event;
+    root["namespace"] = "BidirectionalTTS";
+
+    auto& req_params = root["req_params"];
+    if (p_speaker) {
+      req_params["speaker"] = *p_speaker;
+    }
+    if (p_text) {
+      req_params["text"] = *p_text;
+    }
+
+    auto& audio_params = req_params["audio_params"];
+    audio_params["format"] = "pcm";
+    audio_params["sample_rate"] = 16000;
+
+    return root;
+  }
+
   static Message parse(std::string_view data) {
     Message msg;
     std::size_t read_size = 0;
@@ -109,7 +133,7 @@ struct VolcTTS::Message {
 
     // header
     if (data.length() < 4) {
-      throw std::runtime_error("no enough Header bytes");
+      throw std::runtime_error("Malformed message: no enough Header bytes");
     }
     msg.msg_type = static_cast<MsgType>(data[1] & 0xf0);
     msg.msg_flag = static_cast<MsgFlag>(data[1] & 0x0f);
@@ -120,7 +144,7 @@ struct VolcTTS::Message {
       auto& ec = msg.error_code;
       sz = readBigEndian(data.substr(read_size), ec);
       if (!sz) {
-        throw std::runtime_error("no enough ErrorCode bytes");
+        throw std::runtime_error("Malformed message: no enough ErrorCode bytes");
       }
       read_size += sz;
     }
@@ -130,7 +154,7 @@ struct VolcTTS::Message {
       uint32_t ev = 0;
       sz = readBigEndian(data.substr(read_size), ev);
       if (!sz) {
-        throw std::runtime_error("no enough Event bytes");
+        throw std::runtime_error("Malformed message: no enough Event bytes");
       }
       read_size += sz;
       msg.event = static_cast<Event>(ev);
@@ -143,7 +167,7 @@ struct VolcTTS::Message {
           msg.event != EventConnectionFinished) {
         sz = readString<uint32_t>(data.substr(read_size), msg.session_id);
         if (!sz) {
-          throw std::runtime_error("no enough SessionID bytes");
+          throw std::runtime_error("Malformed message: no enough SessionID bytes");
         }
         read_size += sz;
       }
@@ -154,7 +178,7 @@ struct VolcTTS::Message {
           msg.event == EventConnectionFinished) {
         sz = readString<uint32_t>(data.substr(read_size), msg.connect_id);
         if (!sz) {
-          throw std::runtime_error("no enough ConnectionID bytes");
+          throw std::runtime_error("Malformed message: no enough ConnectionID bytes");
         }
         read_size += sz;
       }
@@ -163,7 +187,7 @@ struct VolcTTS::Message {
     // payload
     sz = readString<uint32_t>(data.substr(read_size), msg.payload);
     if (!sz) {
-      throw std::runtime_error("no enough Payload bytes");
+      throw std::runtime_error("Malformed message: no enough Payload bytes");
     }
     read_size += sz;
 
@@ -250,12 +274,14 @@ void VolcTTS::teardown() {
                                                      shared_from_base<VolcTTS>()));
 }
 
-void VolcTTS::start_session(std::string_view session_id) {
-  auto p_id = std::make_shared<std::string>(session_id);
+void VolcTTS::start_session(std::string_view id, std::string_view speaker) {
+  auto p_id = std::make_shared<std::string>(id);
+  auto p_speaker = std::make_shared<std::string>(speaker);
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_start,
                                                      shared_from_base<VolcTTS>(),
-                                                     p_id));
+                                                     p_id,
+                                                     p_speaker));
 }
 
 void VolcTTS::stop_session() {
@@ -285,24 +311,70 @@ void VolcTTS::on_post_teardown() {
   }
 }
 
-void VolcTTS::on_post_start(std::shared_ptr<std::string> p_id) {
+void VolcTTS::on_post_start(std::shared_ptr<std::string> p_id,
+                            std::shared_ptr<std::string> p_speaker) {
   if (state_ == 2) {
     state_ = 3;
-    // XXX TODO: createSession
+    p_sess_id_ = p_id;
+    p_speaker_ = p_speaker;
+    tts_start_session();
   }
 }
 
 void VolcTTS::on_post_stop() {
   if (state_ == 4) {
     state_ = 5;
-    // XXX TODO: deleteSession
+    tts_stop_session();
   }
 }
 
 void VolcTTS::on_post_request(std::shared_ptr<std::string> p_text) {
   if (state_ == 4) {
-    // XXX TODO: taskRequest
+    tts_send_request(p_text);
   }
+}
+
+void VolcTTS::tts_start_connection() {
+  Message msg;
+  msg.msg_type = Message::MsgTypeFullClient;
+  msg.msg_flag = Message::MsgFlagWithEvent;
+  msg.event = Message::EventStartConnection;
+  msg.payload = "{}";
+
+  send(msg.dump());
+}
+
+void VolcTTS::tts_start_session() {
+  Message msg;
+  msg.msg_type = Message::MsgTypeFullClient;
+  msg.msg_flag = Message::MsgFlagWithEvent;
+  msg.event = Message::EventStartSession;
+  msg.session_id = *p_sess_id_;
+  msg.payload = Message::make_json_payload(msg.event, p_speaker_).dump();
+
+  send(msg.dump());
+}
+
+void VolcTTS::tts_stop_session() {
+  Message msg;
+  msg.msg_type = Message::MsgTypeFullClient;
+  msg.msg_flag = Message::MsgFlagWithEvent;
+  msg.event = Message::EventFinishSession;
+  msg.session_id = *p_sess_id_;
+  msg.payload = "{}";
+
+  send(msg.dump());
+}
+
+void VolcTTS::tts_send_request(std::shared_ptr<std::string> p_text) {
+  Message msg;
+  msg.msg_type = Message::MsgTypeFullClient;
+  msg.msg_flag = Message::MsgFlagWithEvent;
+  msg.event = Message::EventTaskRequest;
+  msg.session_id = *p_sess_id_;
+  msg.payload = Message::make_json_payload(msg.event, p_speaker_, p_text).dump();
+
+  send(msg.dump());
 }
 
 bool VolcTTS::on_handshake_cb() {
@@ -321,7 +393,7 @@ void VolcTTS::on_open_cb() {
   cb_(EventOpen, logid_, "");
 
   state_ = 1;
-  // XXX TODO: startConnection
+  tts_start_connection();
 }
 
 void VolcTTS::on_close_cb() {
@@ -331,7 +403,68 @@ void VolcTTS::on_close_cb() {
 }
 
 void VolcTTS::on_message_cb(std::string_view msg) {
-  // XXX TODO: parse message
+  try {
+    auto volc_msg = Message::parse(msg);
+
+    if (volc_msg.msg_type == Message::MsgTypeError) {
+      throw std::runtime_error("TTS Error: code=" + std::to_string(volc_msg.error_code));
+    }
+
+    if (volc_msg.msg_type == Message::MsgTypeFullServer &&
+        volc_msg.msg_flag == Message::MsgFlagWithEvent) {
+      switch (volc_msg.event) {
+        case Message::EventConnectionStarted:
+          if (state_ == 1) {
+            cb_(EventConnStarted, volc_msg.connect_id, volc_msg.payload);
+            state_ = 2;
+          }
+          break;
+
+        case Message::EventSessionStarted:
+          if (state_ > 2 && state_ < 6) {
+            cb_(EventSessStarted, volc_msg.session_id, volc_msg.payload);
+            state_ = 4;
+          }
+          break;
+
+        case Message::EventSessionFinished:
+          if (state_ > 2 && state_ < 6) {
+            cb_(EventSessFinished, volc_msg.session_id, volc_msg.payload);
+            state_ = 2;
+          }
+          break;
+
+        case Message::EventTTSSentenceStart:
+          if (state_ > 2 && state_ < 6) {
+            cb_(EventTTSMessage, volc_msg.session_id, volc_msg.payload);
+          }
+          break;
+
+        case Message::EventConnectionFinished:
+        case Message::EventConnectionFailed:
+        case Message::EventSessionFailed:
+          throw std::runtime_error("Unexpected event: " + std::to_string(volc_msg.event));
+          break;
+
+        default:
+          // unknown message
+          break;
+      }
+    }
+
+    if (volc_msg.msg_type == Message::MsgTypeAudioOnlyServer &&
+        volc_msg.msg_flag == Message::MsgFlagWithEvent) {
+      if (state_ > 2 && state_ < 6) {
+        if (volc_msg.event == Message::EventTTSResponse) {
+          cb_(EventTTSAudio, volc_msg.session_id, volc_msg.payload);
+        }
+      }
+    }
+
+  } catch (const std::exception& e) {
+    cb_(EventError, logid_, e.what());
+    on_post_teardown();
+  }
 }
 
 void VolcTTS::on_error_cb(const std::exception& e) {

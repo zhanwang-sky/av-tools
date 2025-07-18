@@ -10,12 +10,21 @@
 #include <sstream>
 #include <thread>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include "volc_tts.hpp"
 
 using namespace av::speech;
 using std::cout;
 using std::cerr;
 using std::endl;
+
+std::string uuidgen() {
+  boost::uuids::random_generator generator;
+  boost::uuids::uuid uuid = generator();
+  return to_string(uuid);
+}
 
 int main(int argc, char* argv[]) {
   if (argc != 4) {
@@ -31,7 +40,7 @@ int main(int argc, char* argv[]) {
     boost::asio::io_context io;
     auto work_guard = boost::asio::make_work_guard(io);
 
-    auto event_handler = [](VolcTTS::Event ev, std::string_view msg, std::string_view id) {
+    auto event_handler = [](VolcTTS::Event ev, std::string_view id, std::string_view msg) {
       std::ostringstream oss;
 
       oss << "event: " << ev;
@@ -39,7 +48,9 @@ int main(int argc, char* argv[]) {
         oss << ", id: " << id;
       }
       if (!msg.empty()) {
-        oss << ", msg: " << msg;
+        if (ev != VolcTTS::EventTTSAudio) {
+          oss << ", msg: " << msg;
+        }
       }
       oss << endl;
 
@@ -49,7 +60,22 @@ int main(int argc, char* argv[]) {
     auto tts = VolcTTS::createVolcTTS(io, appid, token, resid, event_handler);
 
     auto t = std::thread([&tts, guard = std::move(work_guard)]() {
+      const char* text = nullptr;
       tts->connect();
+      std::this_thread::sleep_for(std::chrono::seconds(3));
+      tts->start_session(uuidgen(), "zh_female_meilinvyou_moon_bigtts");
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+      text = "你好";
+      cout << text << endl;
+      tts->request(text);
+      tts->stop_session();
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+      tts->start_session(uuidgen(), "zh_male_beijingxiaoye_emo_v2_mars_bigtts");
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+      text = "再见。";
+      cout << text << endl;
+      tts->request(text);
+      tts->stop_session();
       std::this_thread::sleep_for(std::chrono::seconds(3));
       tts->teardown();
     });
