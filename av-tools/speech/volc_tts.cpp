@@ -105,18 +105,17 @@ struct VolcTTS::Message {
 
   static nlohmann::json
   make_json_payload(Event event,
-                    std::shared_ptr<std::string> p_speaker = nullptr,
-                    std::shared_ptr<std::string> p_text = nullptr) {
+                    std::string_view speaker = "", std::string_view text = "") {
     nlohmann::json root;
     root["event"] = event;
     root["namespace"] = "BidirectionalTTS";
 
     auto& req_params = root["req_params"];
-    if (p_speaker) {
-      req_params["speaker"] = *p_speaker;
+    if (!speaker.empty()) {
+      req_params["speaker"] = speaker;
     }
-    if (p_text) {
-      req_params["text"] = *p_text;
+    if (!text.empty()) {
+      req_params["text"] = text;
     }
 
     auto& audio_params = req_params["audio_params"];
@@ -274,28 +273,20 @@ void VolcTTS::teardown() {
                                                      shared_from_base<VolcTTS>()));
 }
 
-void VolcTTS::start_session(std::string_view id, std::string_view speaker) {
-  auto p_id = std::make_shared<std::string>(id);
-  auto p_speaker = std::make_shared<std::string>(speaker);
-  boost::asio::post(get_executor(),
-                    boost::beast::bind_front_handler(&VolcTTS::on_post_start,
-                                                     shared_from_base<VolcTTS>(),
-                                                     p_id,
-                                                     p_speaker));
-}
-
-void VolcTTS::stop_session() {
-  boost::asio::post(get_executor(),
-                    boost::beast::bind_front_handler(&VolcTTS::on_post_stop,
-                                                     shared_from_base<VolcTTS>()));
-}
-
-void VolcTTS::request(std::string_view text) {
-  auto p_text = std::make_shared<std::string>(text);
+void VolcTTS::request(const Request& req) {
+  auto p_req = std::make_shared<Request>(req);
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_request,
                                                      shared_from_base<VolcTTS>(),
-                                                     p_text));
+                                                     p_req));
+}
+
+void VolcTTS::request(Request&& req) {
+  auto p_req = std::make_shared<Request>(std::move(req));
+  boost::asio::post(get_executor(),
+                    boost::beast::bind_front_handler(&VolcTTS::on_post_request,
+                                                     shared_from_base<VolcTTS>(),
+                                                     p_req));
 }
 
 void VolcTTS::on_post_connect() {
@@ -311,27 +302,43 @@ void VolcTTS::on_post_teardown() {
   }
 }
 
-void VolcTTS::on_post_start(std::shared_ptr<std::string> p_id,
-                            std::shared_ptr<std::string> p_speaker) {
-  if (state_ == 2) {
-    state_ = 3;
-    p_sess_id_ = p_id;
-    p_speaker_ = p_speaker;
-    tts_start_session();
+void VolcTTS::on_post_request(std::shared_ptr<Request> p_req) {
+  if (state_ < 6) {
+    req_list_.push_back(p_req);
+    process_next();
   }
 }
 
-void VolcTTS::on_post_stop() {
-  if (state_ == 4) {
-    state_ = 5;
-    tts_stop_session();
-  }
-}
+void VolcTTS::process_next() {
 
-void VolcTTS::on_post_request(std::shared_ptr<std::string> p_text) {
-  if (state_ == 4) {
-    tts_send_request(p_text);
-  }
+  while (!req_list_.empty() && (state_ == 2 || state_ == 4)) {
+    auto& p_next = req_list_.front();
+
+    if (state_ == 2) {
+      if (!p_next->session.empty()) {
+        tts_start_session(p_next->session, p_next->speaker);
+      }
+      if (p_next->session.empty() || p_next->text.empty()) {
+        req_list_.pop_front();
+      }
+    } else {
+      if (p_next->session != curr_session_) {
+        if (!curr_session_.empty()) {
+          tts_stop_session();
+        }
+        if (p_next->session.empty()) {
+          req_list_.pop_front();
+        }
+      } else {
+        if (!p_next->text.empty()) {
+          tts_send_request(p_next->text);
+        }
+        req_list_.pop_front();
+      }
+    } // if state_
+
+  } // while
+
 }
 
 void VolcTTS::tts_start_connection() {
@@ -341,16 +348,24 @@ void VolcTTS::tts_start_connection() {
   msg.event = Message::EventStartConnection;
   msg.payload = "{}";
 
+  // -> connecting
+  state_ = 1;
+
   send(msg.dump());
 }
 
-void VolcTTS::tts_start_session() {
+void VolcTTS::tts_start_session(std::string_view session, std::string_view speaker) {
   Message msg;
   msg.msg_type = Message::MsgTypeFullClient;
   msg.msg_flag = Message::MsgFlagWithEvent;
   msg.event = Message::EventStartSession;
-  msg.session_id = *p_sess_id_;
-  msg.payload = Message::make_json_payload(msg.event, p_speaker_).dump();
+  msg.session_id = session;
+  msg.payload = Message::make_json_payload(msg.event, speaker).dump();
+
+  // -> creating
+  curr_session_ = session;
+  curr_speaker_ = speaker;
+  state_ = 3;
 
   send(msg.dump());
 }
@@ -360,19 +375,22 @@ void VolcTTS::tts_stop_session() {
   msg.msg_type = Message::MsgTypeFullClient;
   msg.msg_flag = Message::MsgFlagWithEvent;
   msg.event = Message::EventFinishSession;
-  msg.session_id = *p_sess_id_;
+  msg.session_id = curr_session_;
   msg.payload = "{}";
+
+  // -> deleting
+  state_ = 5;
 
   send(msg.dump());
 }
 
-void VolcTTS::tts_send_request(std::shared_ptr<std::string> p_text) {
+void VolcTTS::tts_send_request(std::string_view text) {
   Message msg;
   msg.msg_type = Message::MsgTypeFullClient;
   msg.msg_flag = Message::MsgFlagWithEvent;
   msg.event = Message::EventTaskRequest;
-  msg.session_id = *p_sess_id_;
-  msg.payload = Message::make_json_payload(msg.event, p_speaker_, p_text).dump();
+  msg.session_id = curr_session_;
+  msg.payload = Message::make_json_payload(msg.event, curr_speaker_, text).dump();
 
   send(msg.dump());
 }
@@ -392,13 +410,11 @@ void VolcTTS::on_open_cb() {
   }
   cb_(EventOpen, logid_, "");
 
-  state_ = 1;
   tts_start_connection();
 }
 
 void VolcTTS::on_close_cb() {
   cb_(EventClose, logid_, "");
-
   state_ = 7;
 }
 
@@ -417,25 +433,28 @@ void VolcTTS::on_message_cb(std::string_view msg) {
           if (state_ == 1) {
             cb_(EventConnStarted, volc_msg.connect_id, volc_msg.payload);
             state_ = 2;
+            process_next();
           }
           break;
 
         case Message::EventSessionStarted:
-          if (state_ > 2 && state_ < 6) {
+          if (state_ > 1 && state_ < 6) {
             cb_(EventSessStarted, volc_msg.session_id, volc_msg.payload);
             state_ = 4;
+            process_next();
           }
           break;
 
         case Message::EventSessionFinished:
-          if (state_ > 2 && state_ < 6) {
+          if (state_ > 1 && state_ < 6) {
             cb_(EventSessFinished, volc_msg.session_id, volc_msg.payload);
             state_ = 2;
+            process_next();
           }
           break;
 
         case Message::EventTTSSentenceStart:
-          if (state_ > 2 && state_ < 6) {
+          if (state_ > 1 && state_ < 6) {
             cb_(EventTTSMessage, volc_msg.session_id, volc_msg.payload);
           }
           break;
@@ -454,7 +473,7 @@ void VolcTTS::on_message_cb(std::string_view msg) {
 
     if (volc_msg.msg_type == Message::MsgTypeAudioOnlyServer &&
         volc_msg.msg_flag == Message::MsgFlagWithEvent) {
-      if (state_ > 2 && state_ < 6) {
+      if (state_ > 1 && state_ < 6) {
         if (volc_msg.event == Message::EventTTSResponse) {
           cb_(EventTTSAudio, volc_msg.session_id, volc_msg.payload);
         }

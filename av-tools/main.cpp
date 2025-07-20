@@ -6,6 +6,7 @@
 //
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -27,20 +28,23 @@ std::string uuidgen() {
 }
 
 int main(int argc, char* argv[]) {
-  if (argc != 4) {
-    cerr << "Usage: ./av-tools <appid> <token> <resid>\n";
+  if (argc != 5) {
+    cerr << "Usage: ./av-tools <appid> <token> <resid> <ofile>\n";
     exit(EXIT_FAILURE);
   }
 
   const char* appid = argv[1];
   const char* token = argv[2];
   const char* resid = argv[3];
+  const char* ofile = argv[4];
 
   try {
-    boost::asio::io_context io;
-    auto work_guard = boost::asio::make_work_guard(io);
+    std::ofstream ofs(ofile, std::fstream::trunc | std::fstream::binary);
+    if (!ofs) {
+      throw std::runtime_error("fail to create output file");
+    }
 
-    auto event_handler = [](VolcTTS::Event ev, std::string_view id, std::string_view msg) {
+    auto event_handler = [&ofs](VolcTTS::Event ev, std::string_view id, std::string_view msg) {
       std::ostringstream oss;
 
       oss << "event: " << ev;
@@ -48,7 +52,9 @@ int main(int argc, char* argv[]) {
         oss << ", id: " << id;
       }
       if (!msg.empty()) {
-        if (ev != VolcTTS::EventTTSAudio) {
+        if (ev == VolcTTS::EventTTSAudio) {
+          ofs.write(msg.data(), msg.size());
+        } else {
           oss << ", msg: " << msg;
         }
       }
@@ -57,27 +63,48 @@ int main(int argc, char* argv[]) {
       cout << oss.str();
     };
 
+    boost::asio::io_context io;
     auto tts = VolcTTS::createVolcTTS(io, appid, token, resid, event_handler);
 
-    auto t = std::thread([&tts, guard = std::move(work_guard)]() {
-      const char* text = nullptr;
-      tts->connect();
-      std::this_thread::sleep_for(std::chrono::seconds(3));
-      tts->start_session(uuidgen(), "zh_female_meilinvyou_moon_bigtts");
-      std::this_thread::sleep_for(std::chrono::seconds(2));
-      text = "你好";
-      cout << text << endl;
-      tts->request(text);
-      tts->stop_session();
-      std::this_thread::sleep_for(std::chrono::seconds(2));
-      tts->start_session(uuidgen(), "zh_male_beijingxiaoye_emo_v2_mars_bigtts");
-      std::this_thread::sleep_for(std::chrono::seconds(2));
-      text = "再见。";
-      cout << text << endl;
-      tts->request(text);
-      tts->stop_session();
-      std::this_thread::sleep_for(std::chrono::seconds(3));
-      tts->teardown();
+    auto t = std::thread([&tts, gurad = boost::asio::make_work_guard(io)]() {
+      std::string session;
+
+      // session 1
+      session = uuidgen();
+      tts->request({session, "zh_male_beijingxiaoye_emo_v2_mars_bigtts", ""});
+      tts->request({session, "", "你"});
+      // connect
+      tts->connect(); // 可以先发起请求，再开始连接
+      tts->request({session, "", "好"});
+      tts->request({session, "", "，"});
+
+      // session 2
+      session = uuidgen(); // 通过不同的sessionID开启新会话
+      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "我"});
+      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "是小"});
+      tts->request({session, "", "明"});
+      tts->request({session, "", "。"});
+      tts->request({"", "", "。"}); // 主动结束会话
+
+      // session 3
+      session = uuidgen();
+      tts->request({session, "zh_female_meilinvyou_emo_v2_mars_bigtts", "很"});
+      tts->request({session, "", "高"});
+      tts->request({session, "", "兴"});
+      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", "认识"}); // 会话中改变音色无效
+      tts->request({session, "", "你"});
+
+      // session 4
+      session = uuidgen(); // uuid改变，开启新会话
+      tts->request({session, "zh_male_yourougongzi_emo_v2_mars_bigtts", ""});
+      tts->request({session, "", ""}); // text为空，为无效请求，会忽略掉
+      tts->request({session, "", ""});
+      tts->request({session, "", "再见"});
+      tts->request({"", "", "再见"}); // 主动结束会话
+
+      std::this_thread::sleep_for(std::chrono::seconds(20));
+
+      tts->teardown(); // 直接关闭WS连接
     });
 
     io.run();

@@ -19,6 +19,12 @@ class VolcTTS : public utils::WSSCliSession {
   struct Message;
 
  public:
+  struct Request {
+    std::string session;
+    std::string speaker;
+    std::string text;
+  };
+
   enum Event {
     EventError = 0,
     EventOpen,
@@ -51,31 +57,26 @@ class VolcTTS : public utils::WSSCliSession {
 
   void teardown();
 
-  void start_session(std::string_view id, std::string_view speaker);
+  void request(const Request& req);
 
-  void stop_session();
-
-  void request(std::string_view text);
+  void request(Request&& req);
 
  private:
   void on_post_connect();
 
   void on_post_teardown();
 
-  void on_post_start(std::shared_ptr<std::string> p_id,
-                     std::shared_ptr<std::string> p_speaker);
+  void on_post_request(std::shared_ptr<Request> p_req);
 
-  void on_post_stop();
-
-  void on_post_request(std::shared_ptr<std::string> p_text);
+  void process_next();
 
   void tts_start_connection();
 
-  void tts_start_session();
+  void tts_start_session(std::string_view session, std::string_view speaker);
 
   void tts_stop_session();
 
-  void tts_send_request(std::shared_ptr<std::string> p_text);
+  void tts_send_request(std::string_view text);
 
   virtual bool on_handshake_cb() override;
 
@@ -92,6 +93,9 @@ class VolcTTS : public utils::WSSCliSession {
   std::string resid_;
   std::string logid_;
   callback_type cb_;
+  std::list<std::shared_ptr<Request>> req_list_;
+  std::string curr_session_;
+  std::string curr_speaker_;
   std::shared_ptr<std::string> p_sess_id_;
   std::shared_ptr<std::string> p_speaker_;
   int state_ = 0;
