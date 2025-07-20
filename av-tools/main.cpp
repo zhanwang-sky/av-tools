@@ -70,39 +70,35 @@ int main(int argc, char* argv[]) {
       std::string session;
 
       // session 1
-      session = uuidgen();
-      tts->request({session, "zh_male_beijingxiaoye_emo_v2_mars_bigtts", ""});
-      tts->request({session, "", "你"});
-      // connect
-      tts->connect(); // 可以先发起请求，再开始连接
-      tts->request({session, "", "好"});
-      tts->request({session, "", "，"});
-
-      // session 2
-      session = uuidgen(); // 通过不同的sessionID开启新会话
+      session = uuidgen(); // 生成sessionID
       tts->request({session, "zh_female_meilinvyou_moon_bigtts", "我"});
       tts->request({session, "zh_female_meilinvyou_moon_bigtts", "是小"});
+      tts->connect(); // 可以先发起请求，再开始连接
       tts->request({session, "", "明"});
       tts->request({session, "", "。"});
-      tts->request({"", "", "。"}); // 主动结束会话
+      tts->request({"", "", "。"}); // sessionID为空，主动结束会话
+
+      // session 2
+      session = uuidgen(); // 生成新的sessionID
+      tts->request({session, "zh_male_beijingxiaoye_emo_v2_mars_bigtts", "听"});
+      tts->request({session, "", "说"});
+      tts->request({session, "", "你"});
+      tts->request({session, "", ""}); // sessionID不变、text为空，无效请求
+      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", "很牛"}); // 会话中改变音色无效
+      tts->request({session, "", "逼"});
+      tts->request({session, "", "啊。"});
 
       // session 3
-      session = uuidgen();
-      tts->request({session, "zh_female_meilinvyou_emo_v2_mars_bigtts", "很"});
-      tts->request({session, "", "高"});
-      tts->request({session, "", "兴"});
-      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", "认识"}); // 会话中改变音色无效
-      tts->request({session, "", "你"});
-
-      // session 4
       session = uuidgen(); // uuid改变，开启新会话
-      tts->request({session, "zh_male_yourougongzi_emo_v2_mars_bigtts", ""});
-      tts->request({session, "", ""}); // text为空，为无效请求，会忽略掉
-      tts->request({session, "", ""});
-      tts->request({session, "", "再见"});
-      tts->request({"", "", "再见"}); // 主动结束会话
+      tts->request({session, "zh_male_yourougongzi_emo_v2_mars_bigtts", "我"});
+      tts->request({session, "", "们改"});
+      tts->request({session, "", "日再"});
+      tts->request({session, "", "聊"});
+      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", ""}); // 换音色无效
+      tts->request({session, "", "，再见"});
+      tts->request({"", "", "再见"}); // sessionID为空，主动结束会话
 
-      std::this_thread::sleep_for(std::chrono::seconds(20));
+      std::this_thread::sleep_for(std::chrono::seconds(10));
 
       tts->teardown(); // 直接关闭WS连接
     });

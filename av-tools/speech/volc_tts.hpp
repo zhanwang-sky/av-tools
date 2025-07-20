@@ -96,8 +96,6 @@ class VolcTTS : public utils::WSSCliSession {
   std::list<std::shared_ptr<Request>> req_list_;
   std::string curr_session_;
   std::string curr_speaker_;
-  std::shared_ptr<std::string> p_sess_id_;
-  std::shared_ptr<std::string> p_speaker_;
   int state_ = 0;
   // 0. init
   // 1. connecting    (transient)
