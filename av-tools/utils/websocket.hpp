@@ -22,7 +22,7 @@
 
 namespace av {
 
-namespace net {
+namespace utils {
 
 class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
  public:
@@ -448,6 +448,6 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
   int close_ = -1;
 };
 
-} // net
+} // utils
 
 } // av

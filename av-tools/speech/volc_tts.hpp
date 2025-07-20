@@ -14,7 +14,7 @@ namespace av {
 
 namespace speech {
 
-class VolcTTS : public net::WSSCliSession {
+class VolcTTS : public utils::WSSCliSession {
   class SSLCtx;
   struct Message;
 

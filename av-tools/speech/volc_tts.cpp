@@ -252,7 +252,7 @@ VolcTTS::createVolcTTS(WSSCliSession::io_context& io,
 VolcTTS::VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
                  std::string_view appid, std::string_view token, std::string_view resid,
                  callback_type&& cb)
-    : net::WSSCliSession(io, ssl, host, "443", url),
+    : utils::WSSCliSession(io, ssl, host, "443", url),
       appid_(appid),
       token_(token),
       resid_(resid),

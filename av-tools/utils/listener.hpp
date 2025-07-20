@@ -16,7 +16,7 @@
 
 namespace av {
 
-namespace net {
+namespace utils {
 
 class Listener : public std::enable_shared_from_this<Listener> {
  public:
@@ -81,6 +81,6 @@ class Listener : public std::enable_shared_from_this<Listener> {
   tcp_acceptor acceptor_;
 };
 
-} // net
+} // utils
 
 } // av
