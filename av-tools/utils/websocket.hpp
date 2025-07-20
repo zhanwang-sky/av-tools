@@ -8,8 +8,8 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 #include <memory>
-#include <queue>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -111,7 +111,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   void on_post_send(std::shared_ptr<std::string> p_msg) {
     if (open_ >= 0 && close_ < 0) {
       bool idle = (open_ > 0) && msg_queue_.empty();
-      msg_queue_.push(p_msg);
+      msg_queue_.push_back(p_msg);
       if (idle) {
         async_write();
       }
@@ -208,7 +208,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
       return;
     }
 
-    msg_queue_.pop();
+    msg_queue_.pop_front();
 
     async_write();
   }
@@ -251,7 +251,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   request_type req_;
   response_type resp_;
   boost::beast::flat_buffer buf_;
-  std::queue<std::shared_ptr<std::string>> msg_queue_;
+  std::list<std::shared_ptr<std::string>> msg_queue_;
   std::string host_;
   std::string port_;
   std::string url_;
@@ -330,7 +330,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
   void on_post_send(std::shared_ptr<std::string> p_msg) {
     if (open_ >= 0 && close_ < 0) {
       bool idle = (open_ > 0) && msg_queue_.empty();
-      msg_queue_.push(p_msg);
+      msg_queue_.push_back(p_msg);
       if (idle) {
         async_write();
       }
@@ -406,7 +406,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
       return;
     }
 
-    msg_queue_.pop();
+    msg_queue_.pop_front();
 
     async_write();
   }
@@ -443,7 +443,7 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
   boost::beast::flat_buffer buf_;
   request_type req_;
   response_type resp_;
-  std::queue<std::shared_ptr<std::string>> msg_queue_;
+  std::list<std::shared_ptr<std::string>> msg_queue_;
   int open_ = -1;
   int close_ = -1;
 };
