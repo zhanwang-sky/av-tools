@@ -64,13 +64,17 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
     return ws_.get_executor();
   }
 
-  void run() {
+  request_type& get_request_from_cb() { return req_; }
+
+  response_type& get_response_from_cb() { return resp_; }
+
+  virtual void run() {
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSCliSession::on_post_run,
                                                        shared_from_this()));
   }
 
-  void send(std::string_view msg) {
+  virtual void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSCliSession::on_post_send,
@@ -78,15 +82,11 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
                                                        p_msg));
   }
 
-  void close() {
+  virtual void close() {
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSCliSession::on_post_close,
                                                        shared_from_this()));
   }
-
-  request_type& get_request_from_cb() { return req_; }
-
-  response_type& get_response_from_cb() { return resp_; }
 
   virtual bool on_handshake_cb() { return true; }
 
@@ -282,13 +282,17 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
     return ws_.get_executor();
   }
 
-  void run() {
+  request_type& get_request_from_cb() { return req_; }
+
+  response_type& get_response_from_cb() { return resp_; }
+
+  virtual void run() {
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSvrSession::on_post_run,
                                                        shared_from_this()));
   }
 
-  void send(std::string_view msg) {
+  virtual void send(std::string_view msg) {
     auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSvrSession::on_post_send,
@@ -296,15 +300,11 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
                                                        p_msg));
   }
 
-  void close() {
+  virtual void close() {
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSvrSession::on_post_close,
                                                        shared_from_this()));
   }
-
-  request_type& get_request_from_cb() { return req_; }
-
-  response_type& get_response_from_cb() { return resp_; }
 
   virtual bool on_handshake_cb() { return true; }
 

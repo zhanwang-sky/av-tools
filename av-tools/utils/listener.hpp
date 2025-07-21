@@ -51,7 +51,7 @@ class Listener : public std::enable_shared_from_this<Listener> {
     return acceptor_.get_executor();
   }
 
-  void run() {
+  virtual void run() {
     async_accept();
   }
 
