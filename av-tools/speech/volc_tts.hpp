@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <functional>
 #include "websocket.hpp"
+#include "speech_concept.hpp"
 
 namespace av {
 
@@ -25,31 +25,17 @@ class VolcTTS : public utils::WSSCliSession {
     std::string text;
   };
 
-  enum Event {
-    EventError = 0,
-    EventOpen,
-    EventClose,
-    EventConnStarted,
-    EventConnFinished,
-    EventSessStarted,
-    EventSessFinished,
-    EventTTSMessage,
-    EventTTSAudio
-  };
-
-  using callback_type = std::function<void(Event ev, std::string_view id, std::string_view msg)>;
-
   static constexpr const char* host = "openspeech.bytedance.com";
   static constexpr const char* url = "/api/v3/tts/bidirection";
 
   static std::shared_ptr<VolcTTS>
   createVolcTTS(WSSCliSession::io_context& io,
                 std::string_view appid, std::string_view token, std::string_view resid,
-                callback_type&& cb);
+                SpeechCallback&& cb);
 
   VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
           std::string_view appid, std::string_view token, std::string_view resid,
-          callback_type&& cb);
+          SpeechCallback&& cb);
 
   virtual ~VolcTTS();
 
@@ -92,7 +78,8 @@ class VolcTTS : public utils::WSSCliSession {
   std::string token_;
   std::string resid_;
   std::string logid_;
-  callback_type cb_;
+  std::string connid_;
+  SpeechCallback cb_;
   std::list<std::shared_ptr<Request>> req_list_;
   std::string curr_session_;
   std::string curr_speaker_;

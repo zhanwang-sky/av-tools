@@ -99,7 +99,7 @@ struct VolcTTS::Message {
     if (!readBigEndian(data, len) || (data.length() < sizeof(T) + len)) {
       return 0;
     }
-    val = std::string(data.data() + sizeof(T), len);
+    val = data.substr(sizeof(T), len);
     return sizeof(T) + len;
   }
 
@@ -244,13 +244,13 @@ struct VolcTTS::Message {
 std::shared_ptr<VolcTTS>
 VolcTTS::createVolcTTS(WSSCliSession::io_context& io,
                        std::string_view appid, std::string_view token, std::string_view resid,
-                       callback_type&& cb) {
+                       SpeechCallback&& cb) {
   return std::make_shared<VolcTTS>(io, SSLCtx::get(), appid, token, resid, std::move(cb));
 }
 
 VolcTTS::VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
                  std::string_view appid, std::string_view token, std::string_view resid,
-                 callback_type&& cb)
+                 SpeechCallback&& cb)
     : utils::WSSCliSession(io, ssl, host, "443", url),
       appid_(appid),
       token_(token),
@@ -312,7 +312,7 @@ void VolcTTS::on_post_request(std::shared_ptr<Request> p_req) {
 void VolcTTS::process_next() {
 
   while (!req_list_.empty() && (state_ == 2 || state_ == 4)) {
-    auto& p_next = req_list_.front();
+    auto p_next = req_list_.front();
 
     if (state_ == 2) {
       if (!p_next->session.empty()) {
@@ -408,13 +408,13 @@ void VolcTTS::on_open_cb() {
   if (resp.find("X-Tt-Logid") != resp.end()) {
     logid_ = resp["X-Tt-Logid"];
   }
-  cb_(EventOpen, logid_, "");
+  cb_({"__ws_open", logid_, {}});
 
   tts_start_connection();
 }
 
 void VolcTTS::on_close_cb() {
-  cb_(EventClose, logid_, "");
+  cb_({"close", connid_, {}});
   state_ = 7;
 }
 
@@ -431,7 +431,8 @@ void VolcTTS::on_message_cb(std::string_view msg) {
       switch (volc_msg.event) {
         case Message::EventConnectionStarted:
           if (state_ == 1) {
-            cb_(EventConnStarted, volc_msg.connect_id, volc_msg.payload);
+            connid_ = volc_msg.connect_id;
+            cb_({"open", connid_, volc_msg.payload});
             state_ = 2;
             process_next();
           }
@@ -439,7 +440,7 @@ void VolcTTS::on_message_cb(std::string_view msg) {
 
         case Message::EventSessionStarted:
           if (state_ > 1 && state_ < 6) {
-            cb_(EventSessStarted, volc_msg.session_id, volc_msg.payload);
+            cb_({"__session_started", volc_msg.session_id, volc_msg.payload});
             state_ = 4;
             process_next();
           }
@@ -447,7 +448,7 @@ void VolcTTS::on_message_cb(std::string_view msg) {
 
         case Message::EventSessionFinished:
           if (state_ > 1 && state_ < 6) {
-            cb_(EventSessFinished, volc_msg.session_id, volc_msg.payload);
+            cb_({"__session_finished", volc_msg.session_id, volc_msg.payload});
             state_ = 2;
             process_next();
           }
@@ -455,7 +456,8 @@ void VolcTTS::on_message_cb(std::string_view msg) {
 
         case Message::EventTTSSentenceStart:
           if (state_ > 1 && state_ < 6) {
-            cb_(EventTTSMessage, volc_msg.session_id, volc_msg.payload);
+            auto j = nlohmann::json::parse(volc_msg.payload);
+            cb_({"sentence", volc_msg.session_id, j["text"].get<std::string>()});
           }
           break;
 
@@ -472,22 +474,23 @@ void VolcTTS::on_message_cb(std::string_view msg) {
     }
 
     if (volc_msg.msg_type == Message::MsgTypeAudioOnlyServer &&
-        volc_msg.msg_flag == Message::MsgFlagWithEvent) {
+        volc_msg.msg_flag == Message::MsgFlagWithEvent &&
+        volc_msg.event == Message::EventTTSResponse) {
       if (state_ > 1 && state_ < 6) {
-        if (volc_msg.event == Message::EventTTSResponse) {
-          cb_(EventTTSAudio, volc_msg.session_id, volc_msg.payload);
-        }
+        cb_({"audio", volc_msg.session_id, std::move(volc_msg.payload)});
       }
     }
 
+    // volc_msg should not be used any more!
+
   } catch (const std::exception& e) {
-    cb_(EventError, logid_, e.what());
+    cb_({"error", "", std::string{e.what()}});
     on_post_teardown();
   }
 }
 
 void VolcTTS::on_error_cb(const std::exception& e) {
-  cb_(EventError, logid_, e.what());
+  cb_({"error", "", std::string{e.what()}});
 
   if (state_ < 6) {
     state_ = 6;

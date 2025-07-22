@@ -44,19 +44,18 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("fail to create output file");
     }
 
-    auto event_handler = [&ofs](VolcTTS::Event ev, std::string_view id, std::string_view msg) {
+    auto event_handler = [&ofs](SpeechEvent&& ev) {
       std::ostringstream oss;
 
-      oss << "event: " << ev;
-      if (!id.empty()) {
-        oss << ", id: " << id;
+      oss << "event: " << ev.event;
+      if (!ev.uuid.empty()) {
+        oss << ", id: " << ev.uuid;
       }
-      if (!msg.empty()) {
-        if (ev == VolcTTS::EventTTSAudio) {
-          ofs.write(msg.data(), msg.size());
-        } else {
-          oss << ", msg: " << msg;
-        }
+      if (ev.event == "sentence") {
+        oss << ", sentence: " << std::any_cast<std::string&>(ev.data);
+      } else if (ev.event == "audio") {
+        auto& data_str = std::any_cast<std::string&>(ev.data);
+        ofs.write(data_str.data(), data_str.size());
       }
       oss << endl;
 
@@ -72,9 +71,9 @@ int main(int argc, char* argv[]) {
       // session 1
       session = uuidgen(); // 生成sessionID
       tts->request({session, "zh_female_meilinvyou_moon_bigtts", "我"});
-      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "是小"});
+      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "是"});
       tts->connect(); // 可以先发起请求，再开始连接
-      tts->request({session, "", "明"});
+      tts->request({session, "", "Siri"});
       tts->request({session, "", "。"});
       tts->request({"", "", "。"}); // sessionID为空，主动结束会话
 
