@@ -46,16 +46,18 @@ int main(int argc, char* argv[]) {
 
     auto event_handler = [&ofs](SpeechEvent&& ev) {
       std::ostringstream oss;
+      auto p_data = std::any_cast<std::string>(&ev.data);
 
       oss << "event: " << ev.event;
       if (!ev.uuid.empty()) {
         oss << ", id: " << ev.uuid;
       }
-      if (ev.event == "sentence") {
-        oss << ", sentence: " << std::any_cast<std::string&>(ev.data);
-      } else if (ev.event == "audio") {
-        auto& data_str = std::any_cast<std::string&>(ev.data);
-        ofs.write(data_str.data(), data_str.size());
+      if (p_data) {
+        if (ev.event == "audio") {
+          ofs.write(p_data->data(), p_data->size());
+        } else {
+          oss << ", msg: " << *p_data;
+        }
       }
       oss << endl;
 
@@ -67,35 +69,48 @@ int main(int argc, char* argv[]) {
 
     auto t = std::thread([&tts, gurad = boost::asio::make_work_guard(io)]() {
       std::string session;
+      std::string speaker;
 
       // session 1
       session = uuidgen(); // 生成sessionID
-      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "我"});
-      tts->request({session, "zh_female_meilinvyou_moon_bigtts", "是"});
+      speaker = "zh_female_meilinvyou_moon_bigtts"; // 指定音色
+
+      tts->request({session, "我", true}); // 传一个非法的speaker类型，会用默认值
+      tts->request({session, "是", {}}); // 后面就不用再传音色了
+
       tts->connect(); // 可以先发起请求，再开始连接
-      tts->request({session, "", "Siri"});
-      tts->request({session, "", "。"});
-      tts->request({"", "", "。"}); // sessionID为空，主动结束会话
+
+      tts->request({session, "Sir", {}});
+      tts->request({session, "i。", {}});
+      tts->request({"", "", {}}); // sessionID为空，主动结束会话
 
       // session 2
       session = uuidgen(); // 生成新的sessionID
-      tts->request({session, "zh_male_beijingxiaoye_emo_v2_mars_bigtts", "听"});
-      tts->request({session, "", "说"});
-      tts->request({session, "", "你"});
-      tts->request({session, "", ""}); // sessionID不变、text为空，无效请求
-      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", "很牛"}); // 会话中改变音色无效
-      tts->request({session, "", "逼"});
-      tts->request({session, "", "啊。"});
+      speaker = "zh_male_beijingxiaoye_emo_v2_mars_bigtts"; // 指定音色
+
+      tts->request({session, "听", speaker});
+      tts->request({session, "说", {}});
+      tts->request({session, "你", {}});
+      tts->request({session, "", {}}); // 同一个sessionID但text为空，无效请求
+
+      speaker = "zh_male_guangzhoudege_emo_mars_bigtts"; // 换一种音色
+      tts->request({session, "很牛", speaker}); // 会话中改变音色无效
+      tts->request({session, "逼", {}});
+      tts->request({session, "啊", {}});
 
       // session 3
       session = uuidgen(); // uuid改变，开启新会话
-      tts->request({session, "zh_male_yourougongzi_emo_v2_mars_bigtts", "我"});
-      tts->request({session, "", "们改"});
-      tts->request({session, "", "日再"});
-      tts->request({session, "", "聊"});
-      tts->request({session, "zh_male_guangzhoudege_emo_mars_bigtts", ""}); // 换音色无效
-      tts->request({session, "", "，再见"});
-      tts->request({"", "", "再见"}); // sessionID为空，主动结束会话
+      tts->request({session, "呵呵", speaker});
+      tts->request({session, "哪", {}});
+      tts->request({session, "里哪里", {}});
+      tts->request({session, "。", {}});
+      tts->request({session, "请问", {}});
+      tts->request({session, "还", {}});
+      tts->request({session, "有什", {}});
+      tts->request({session, "么", {}});
+      tts->request({session, "可以帮", {}});
+      tts->request({session, "助您的？", {}});
+      tts->request({"", "", {}}); // sessionID为空，主动结束会话
 
       std::this_thread::sleep_for(std::chrono::seconds(10));
 

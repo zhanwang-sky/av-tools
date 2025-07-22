@@ -273,16 +273,16 @@ void VolcTTS::teardown() {
                                                      shared_from_base<VolcTTS>()));
 }
 
-void VolcTTS::request(const Request& req) {
-  auto p_req = std::make_shared<Request>(req);
+void VolcTTS::request(const TTSRequest& req) {
+  auto p_req = std::make_shared<TTSRequest>(req);
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_request,
                                                      shared_from_base<VolcTTS>(),
                                                      p_req));
 }
 
-void VolcTTS::request(Request&& req) {
-  auto p_req = std::make_shared<Request>(std::move(req));
+void VolcTTS::request(TTSRequest&& req) {
+  auto p_req = std::make_shared<TTSRequest>(std::move(req));
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_request,
                                                      shared_from_base<VolcTTS>(),
@@ -302,7 +302,7 @@ void VolcTTS::on_post_teardown() {
   }
 }
 
-void VolcTTS::on_post_request(std::shared_ptr<Request> p_req) {
+void VolcTTS::on_post_request(std::shared_ptr<TTSRequest> p_req) {
   if (state_ < 6) {
     req_list_.push_back(p_req);
     process_next();
@@ -315,18 +315,19 @@ void VolcTTS::process_next() {
     auto p_next = req_list_.front();
 
     if (state_ == 2) {
-      if (!p_next->session.empty()) {
-        tts_start_session(p_next->session, p_next->speaker);
+      if (!p_next->uuid.empty()) {
+        auto p_speaker = std::any_cast<std::string>(&p_next->params);
+        tts_start_session(p_next->uuid, p_speaker ? p_speaker->c_str() : default_speaker);
       }
-      if (p_next->session.empty() || p_next->text.empty()) {
+      if (p_next->uuid.empty() || p_next->text.empty()) {
         req_list_.pop_front();
       }
     } else {
-      if (p_next->session != curr_session_) {
+      if (p_next->uuid != curr_session_) {
         if (!curr_session_.empty()) {
           tts_stop_session();
         }
-        if (p_next->session.empty()) {
+        if (p_next->uuid.empty()) {
           req_list_.pop_front();
         }
       } else {

@@ -19,14 +19,9 @@ class VolcTTS : public utils::WSSCliSession {
   struct Message;
 
  public:
-  struct Request {
-    std::string session;
-    std::string speaker;
-    std::string text;
-  };
-
   static constexpr const char* host = "openspeech.bytedance.com";
   static constexpr const char* url = "/api/v3/tts/bidirection";
+  static constexpr const char* default_speaker = "zh_female_shuangkuaisisi_moon_bigtts";
 
   static std::shared_ptr<VolcTTS>
   createVolcTTS(WSSCliSession::io_context& io,
@@ -43,16 +38,16 @@ class VolcTTS : public utils::WSSCliSession {
 
   void teardown();
 
-  void request(const Request& req);
+  void request(const TTSRequest& req);
 
-  void request(Request&& req);
+  void request(TTSRequest&& req);
 
  private:
   void on_post_connect();
 
   void on_post_teardown();
 
-  void on_post_request(std::shared_ptr<Request> p_req);
+  void on_post_request(std::shared_ptr<TTSRequest> p_req);
 
   void process_next();
 
@@ -80,7 +75,7 @@ class VolcTTS : public utils::WSSCliSession {
   std::string logid_;
   std::string connid_;
   SpeechCallback cb_;
-  std::list<std::shared_ptr<Request>> req_list_;
+  std::list<std::shared_ptr<TTSRequest>> req_list_;
   std::string curr_session_;
   std::string curr_speaker_;
   int state_ = 0;
