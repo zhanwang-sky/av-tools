@@ -261,15 +261,15 @@ VolcTTS::VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
 
 VolcTTS::~VolcTTS() { }
 
-void VolcTTS::connect() {
+void VolcTTS::run() {
   boost::asio::post(get_executor(),
-                    boost::beast::bind_front_handler(&VolcTTS::on_post_connect,
+                    boost::beast::bind_front_handler(&VolcTTS::on_post_run,
                                                      shared_from_base<VolcTTS>()));
 }
 
-void VolcTTS::teardown() {
+void VolcTTS::close() {
   boost::asio::post(get_executor(),
-                    boost::beast::bind_front_handler(&VolcTTS::on_post_teardown,
+                    boost::beast::bind_front_handler(&VolcTTS::on_post_close,
                                                      shared_from_base<VolcTTS>()));
 }
 
@@ -289,16 +289,16 @@ void VolcTTS::request(TTSRequest&& req) {
                                                      p_req));
 }
 
-void VolcTTS::on_post_connect() {
+void VolcTTS::on_post_run() {
   if (state_ <= 0) {
-    run();
+    WSSCliSession::run();
   }
 }
 
-void VolcTTS::on_post_teardown() {
+void VolcTTS::on_post_close() {
   if (state_ < 6) {
     state_ = 6;
-    close();
+    WSSCliSession::close();
   }
 }
 
@@ -486,7 +486,7 @@ void VolcTTS::on_message_cb(std::string_view msg) {
 
   } catch (const std::exception& e) {
     cb_({"error", "", std::string{e.what()}});
-    on_post_teardown();
+    on_post_close();
   }
 }
 

@@ -75,10 +75,10 @@ int main(int argc, char* argv[]) {
       session = uuidgen(); // 生成sessionID
       speaker = "zh_female_meilinvyou_moon_bigtts"; // 指定音色
 
-      tts->request({session, "我", true}); // 传一个非法的speaker类型，会用默认值
-      tts->request({session, "是", {}}); // 后面就不用再传音色了
+      tts->request({session, "Hi, 你", true}); // 传一个非法的speaker类型，会用默认值
+      tts->request({session, "好，我是", {}}); // 后面就不用再传音色了
 
-      tts->connect(); // 可以先发起请求，再开始连接
+      tts->run(); // 可以先发起请求，再开始连接
 
       tts->request({session, "Sir", {}});
       tts->request({session, "i。", {}});
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
 
       std::this_thread::sleep_for(std::chrono::seconds(10));
 
-      tts->teardown(); // 直接关闭WS连接
+      tts->close(); // 直接关闭WS连接
     });
 
     io.run();

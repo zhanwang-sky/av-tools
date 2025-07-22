@@ -34,18 +34,18 @@ class VolcTTS : public utils::WSSCliSession {
 
   virtual ~VolcTTS();
 
-  void connect();
+  virtual void run() override;
 
-  void teardown();
+  virtual void close() override;
 
   void request(const TTSRequest& req);
 
   void request(TTSRequest&& req);
 
  private:
-  void on_post_connect();
+  void on_post_run();
 
-  void on_post_teardown();
+  void on_post_close();
 
   void on_post_request(std::shared_ptr<TTSRequest> p_req);
 
