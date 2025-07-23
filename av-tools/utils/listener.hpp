@@ -56,18 +56,18 @@ class Listener : public std::enable_shared_from_this<Listener> {
     async_accept();
   }
 
-  virtual void on_accept_cb(socket&& socket) = 0;
+  virtual void on_accept_cb(socket&& s) = 0;
 
   virtual void on_error_cb(const std::exception& e) = 0;
 
  private:
-  void on_accept(boost::system::error_code ec, socket socket) {
+  void on_accept(boost::system::error_code ec, socket s) {
     if (ec) {
       on_error_cb(std::runtime_error(ec.message()));
       return;
     }
 
-    on_accept_cb(std::move(socket));
+    on_accept_cb(std::move(s));
 
     async_accept();
   }
