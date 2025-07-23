@@ -19,14 +19,15 @@ namespace av {
 namespace utils {
 
 class Listener : public std::enable_shared_from_this<Listener> {
+  using socket_base = boost::asio::socket_base;
+
  public:
   using io_context = boost::asio::io_context;
-  using socket_base = boost::asio::socket_base;
-  using tcp_acceptor = boost::asio::ip::tcp::acceptor;
-  using tcp_endpoint = boost::asio::ip::tcp::endpoint;
-  using tcp_socket = boost::asio::ip::tcp::socket;
+  using acceptor = boost::asio::ip::tcp::acceptor;
+  using endpoint = boost::asio::ip::tcp::endpoint;
+  using socket = boost::asio::ip::tcp::socket;
 
-  Listener(io_context& io, tcp_endpoint ep)
+  Listener(io_context& io, endpoint ep)
       : io_(io),
         acceptor_(boost::asio::make_strand(io))
   {
@@ -55,12 +56,12 @@ class Listener : public std::enable_shared_from_this<Listener> {
     async_accept();
   }
 
-  virtual void on_accept_cb(tcp_socket&& socket) = 0;
+  virtual void on_accept_cb(socket&& socket) = 0;
 
   virtual void on_error_cb(const std::exception& e) = 0;
 
  private:
-  void on_accept(boost::system::error_code ec, tcp_socket socket) {
+  void on_accept(boost::system::error_code ec, socket socket) {
     if (ec) {
       on_error_cb(std::runtime_error(ec.message()));
       return;
@@ -78,7 +79,7 @@ class Listener : public std::enable_shared_from_this<Listener> {
   }
 
   io_context& io_;
-  tcp_acceptor acceptor_;
+  acceptor acceptor_;
 };
 
 } // utils

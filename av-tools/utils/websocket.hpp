@@ -25,16 +25,17 @@ namespace av {
 namespace utils {
 
 class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
- public:
-  using io_context = boost::asio::io_context;
-  using ssl_context = boost::asio::ssl::context;
-  using tcp_resolver = boost::asio::ip::tcp::resolver;
-  using request_type = boost::beast::websocket::request_type;
-  using response_type = boost::beast::websocket::response_type;
   using tcp_stream = boost::beast::tcp_stream;
   using ssl_stream = boost::asio::ssl::stream<tcp_stream>;
   using wss_stream = boost::beast::websocket::stream<ssl_stream>;
   using ws_stream_base = boost::beast::websocket::stream_base;
+
+ public:
+  using io_context = boost::asio::io_context;
+  using ssl_context = boost::asio::ssl::context;
+  using resolver = boost::asio::ip::tcp::resolver;
+  using request_type = boost::beast::websocket::request_type;
+  using response_type = boost::beast::websocket::response_type;
 
   WSSCliSession(io_context& io, ssl_context& ssl,
                 std::string_view host, std::string_view port,
@@ -129,7 +130,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   }
 
   void on_resolve(boost::system::error_code ec,
-                  tcp_resolver::results_type results) {
+                  resolver::results_type results) {
     if (should_exit(ec)) {
       return;
     }
@@ -142,7 +143,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   }
 
   void on_connect(boost::system::error_code ec,
-                  tcp_resolver::results_type::endpoint_type) {
+                  resolver::results_type::endpoint_type) {
     if (should_exit(ec)) {
       return;
     }
@@ -246,7 +247,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
     return false;
   }
 
-  tcp_resolver resolver_;
+  resolver resolver_;
   wss_stream ws_;
   request_type req_;
   response_type resp_;
@@ -260,15 +261,16 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
 };
 
 class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
- public:
-  using tcp_socket = boost::asio::ip::tcp::socket;
-  using request_type = boost::beast::websocket::request_type;
-  using response_type = boost::beast::websocket::response_type;
   using tcp_stream = boost::beast::tcp_stream;
   using ws_stream = boost::beast::websocket::stream<tcp_stream>;
   using ws_stream_base = boost::beast::websocket::stream_base;
 
-  WSSvrSession(tcp_socket&& socket) : ws_(std::move(socket)) { }
+ public:
+  using socket = boost::asio::ip::tcp::socket;
+  using request_type = boost::beast::websocket::request_type;
+  using response_type = boost::beast::websocket::response_type;
+
+  WSSvrSession(socket&& s) : ws_(std::move(s)) { }
 
   virtual ~WSSvrSession() { }
 
