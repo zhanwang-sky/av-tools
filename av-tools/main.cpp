@@ -15,6 +15,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "volc_tts.hpp"
+#include "listener.hpp"
 
 using namespace av::speech;
 using std::cout;
@@ -75,7 +76,7 @@ int main(int argc, char* argv[]) {
       session = uuidgen(); // 生成sessionID
       speaker = "zh_female_meilinvyou_moon_bigtts"; // 指定音色
 
-      tts->request({session, "嘿嘿，你", true}); // 传一个非法的speaker类型，会用默认值
+      tts->request({session, "哈哈，你", true}); // 传一个非法的speaker类型，会用默认值
       tts->request({session, "好呀，我是", {}}); // 后面就不用再传音色了
 
       tts->run(); // 可以先发起请求，再开始连接

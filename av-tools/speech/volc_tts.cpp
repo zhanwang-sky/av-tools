@@ -242,13 +242,13 @@ struct VolcTTS::Message {
 };
 
 std::shared_ptr<VolcTTS>
-VolcTTS::createVolcTTS(WSSCliSession::io_context& io,
+VolcTTS::createVolcTTS(boost::asio::io_context& io,
                        std::string_view appid, std::string_view token, std::string_view resid,
                        SpeechCallback&& cb) {
   return std::make_shared<VolcTTS>(io, SSLCtx::get(), appid, token, resid, std::move(cb));
 }
 
-VolcTTS::VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
+VolcTTS::VolcTTS(boost::asio::io_context& io, WSSCliSession::ssl_context& ssl,
                  std::string_view appid, std::string_view token, std::string_view resid,
                  SpeechCallback&& cb)
     : utils::WSSCliSession(io, ssl, host, "443", url),
@@ -274,19 +274,17 @@ void VolcTTS::close() {
 }
 
 void VolcTTS::request(const TTSRequest& req) {
-  auto p_req = std::make_shared<TTSRequest>(req);
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_request,
                                                      shared_from_base<VolcTTS>(),
-                                                     p_req));
+                                                     std::make_shared<TTSRequest>(req)));
 }
 
 void VolcTTS::request(TTSRequest&& req) {
-  auto p_req = std::make_shared<TTSRequest>(std::move(req));
   boost::asio::post(get_executor(),
                     boost::beast::bind_front_handler(&VolcTTS::on_post_request,
                                                      shared_from_base<VolcTTS>(),
-                                                     p_req));
+                                                     std::make_shared<TTSRequest>(std::move(req))));
 }
 
 void VolcTTS::on_post_run() {

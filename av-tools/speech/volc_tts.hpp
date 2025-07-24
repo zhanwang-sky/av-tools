@@ -24,11 +24,11 @@ class VolcTTS : public utils::WSSCliSession {
   static constexpr const char* default_speaker = "zh_female_shuangkuaisisi_moon_bigtts";
 
   static std::shared_ptr<VolcTTS>
-  createVolcTTS(WSSCliSession::io_context& io,
+  createVolcTTS(boost::asio::io_context& io,
                 std::string_view appid, std::string_view token, std::string_view resid,
                 SpeechCallback&& cb);
 
-  VolcTTS(WSSCliSession::io_context& io, WSSCliSession::ssl_context& ssl,
+  VolcTTS(boost::asio::io_context& io, WSSCliSession::ssl_context& ssl,
           std::string_view appid, std::string_view token, std::string_view resid,
           SpeechCallback&& cb);
 

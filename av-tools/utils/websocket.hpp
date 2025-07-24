@@ -31,13 +31,12 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   using ws_stream_base = boost::beast::websocket::stream_base;
 
  public:
-  using io_context = boost::asio::io_context;
   using ssl_context = boost::asio::ssl::context;
   using resolver = boost::asio::ip::tcp::resolver;
   using request_type = boost::beast::websocket::request_type;
   using response_type = boost::beast::websocket::response_type;
 
-  WSSCliSession(io_context& io, ssl_context& ssl,
+  WSSCliSession(boost::asio::io_context& io, ssl_context& ssl,
                 std::string_view host, std::string_view port,
                 std::string_view url)
       : resolver_(boost::asio::make_strand(io)),
@@ -76,11 +75,10 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   }
 
   virtual void send(std::string_view msg) {
-    auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSCliSession::on_post_send,
                                                        shared_from_this(),
-                                                       p_msg));
+                                                       std::make_shared<std::string>(msg)));
   }
 
   virtual void close() {
@@ -295,11 +293,10 @@ class WSSvrSession : public std::enable_shared_from_this<WSSvrSession> {
   }
 
   virtual void send(std::string_view msg) {
-    auto p_msg = std::make_shared<std::string>(msg);
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSvrSession::on_post_send,
                                                        shared_from_this(),
-                                                       p_msg));
+                                                       std::make_shared<std::string>(msg)));
   }
 
   virtual void close() {

@@ -22,12 +22,11 @@ class Listener : public std::enable_shared_from_this<Listener> {
   using socket_base = boost::asio::socket_base;
 
  public:
-  using io_context = boost::asio::io_context;
   using acceptor = boost::asio::ip::tcp::acceptor;
   using endpoint = boost::asio::ip::tcp::endpoint;
   using socket = boost::asio::ip::tcp::socket;
 
-  Listener(io_context& io, endpoint ep)
+  Listener(boost::asio::io_context& io, endpoint ep)
       : io_(io),
         acceptor_(boost::asio::make_strand(io))
   {
@@ -78,7 +77,7 @@ class Listener : public std::enable_shared_from_this<Listener> {
                                                             shared_from_this()));
   }
 
-  io_context& io_;
+  boost::asio::io_context& io_;
   acceptor acceptor_;
 };
 
