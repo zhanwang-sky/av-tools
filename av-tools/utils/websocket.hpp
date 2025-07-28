@@ -84,7 +84,8 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   virtual void close() {
     boost::asio::post(ws_.get_executor(),
                       boost::beast::bind_front_handler(&WSSCliSession::on_post_close,
-                                                       shared_from_this()));
+                                                       shared_from_this(),
+                                                       false));
   }
 
   virtual bool on_handshake_cb() { return true; }
@@ -117,13 +118,23 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
     }
   }
 
-  void on_post_close() {
-    if (close_ < 0) {
-      close_ = 0;
-      resolver_.cancel();
-      ws_.async_close(boost::beast::websocket::close_code::normal,
-                      boost::beast::bind_front_handler(&WSSCliSession::on_disconnect,
-                                                       shared_from_this()));
+  void on_post_close(bool force) {
+    if (force) {
+      if (close_ <= 0) {
+        resolver_.cancel();
+        boost::beast::get_lowest_layer(ws_).cancel();
+        on_disconnect(boost::asio::error::operation_aborted);
+      }
+    } else {
+      if (close_ < 0) {
+        if (open_ < 0) {
+          on_disconnect(boost::asio::error::operation_aborted);
+        } else {
+          resolver_.cancel();
+          on_post_send(nullptr);
+          close_ = 0;
+        }
+      }
     }
   }
 
@@ -160,7 +171,7 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
     boost::beast::get_lowest_layer(ws_).expires_never();
 
     if (!on_handshake_cb()) {
-      on_post_close();
+      on_post_close(true);
       return;
     }
 
@@ -226,19 +237,25 @@ class WSSCliSession : public std::enable_shared_from_this<WSSCliSession> {
   inline void async_write() {
     if (!msg_queue_.empty()) {
       auto& p_msg = msg_queue_.front();
-      ws_.async_write(boost::asio::buffer(*p_msg),
-                      boost::beast::bind_front_handler(&WSSCliSession::on_write,
-                                                       shared_from_this()));
+      if (p_msg) {
+        ws_.async_write(boost::asio::buffer(*p_msg),
+                        boost::beast::bind_front_handler(&WSSCliSession::on_write,
+                                                         shared_from_this()));
+      } else {
+        ws_.async_close(boost::beast::websocket::close_code::normal,
+                        boost::beast::bind_front_handler(&WSSCliSession::on_disconnect,
+                                                         shared_from_this()));
+      }
     }
   }
 
   inline bool should_exit(const boost::system::error_code& ec) {
-    if (ec || close_ >= 0) {
+    if (ec || close_ > 0) {
       if (ec) {
         if (ec != boost::asio::error::operation_aborted) {
           on_error_cb(std::runtime_error(ec.message()));
         }
-        on_post_close();
+        on_post_close(true);
       }
       return true;
     }
