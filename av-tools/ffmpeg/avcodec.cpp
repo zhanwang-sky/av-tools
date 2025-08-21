@@ -62,10 +62,10 @@ void CodecBase::open(AVDictionary** opts) {
 
   rc = avcodec_open2(ctx_, codec_, opts);
   if (rc < 0) {
-    std::string err_str = "CodecBase: ";
+    std::string err_str;
     char err_msg[AV_ERROR_MAX_STRING_SIZE];
     av_strerror(rc, err_msg, sizeof(err_msg));
-    err_str += err_msg;
+    err_str.append("CodecBase: ").append(err_msg);
     throw std::runtime_error(err_str);
   }
 

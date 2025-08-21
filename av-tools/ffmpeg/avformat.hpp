@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/2/7.
 //
 
-#ifndef avformat_hpp
-#define avformat_hpp
+#pragma once
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -36,7 +35,7 @@ class Demuxer {
   int read_frame(AVPacket* pkt);
 
  private:
-  void clear();
+  void clean();
 
   AVFormatContext* ctx_ = nullptr;
 };
@@ -67,7 +66,7 @@ class Muxer {
   int interleaved_write_frame(AVPacket* pkt);
 
  private:
-  void clear();
+  void clean();
 
   AVFormatContext* ctx_ = nullptr;
   bool need_close_ = false;
@@ -77,5 +76,3 @@ class Muxer {
 } // ffmpeg
 
 } // av
-
-#endif /* avformat_hpp */

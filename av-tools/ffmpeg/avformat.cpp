@@ -6,6 +6,7 @@
 //
 
 #include <stdexcept>
+#include <string>
 
 #include "avformat.hpp"
 
@@ -16,6 +17,7 @@ Demuxer::Demuxer(const char* url,
                  AVDictionary** opts) {
   int rc;
   char err_msg[AV_ERROR_MAX_STRING_SIZE];
+  std::string err_str;
 
   rc = avformat_open_input(&ctx_, url, fmt, opts);
   if (rc < 0) {
@@ -30,9 +32,10 @@ Demuxer::Demuxer(const char* url,
   return;
 
 err_exit:
+  clean();
   av_strerror(rc, err_msg, sizeof(err_msg));
-  clear();
-  throw std::runtime_error(err_msg);
+  err_str.append("Demuxer: ").append(err_msg);
+  throw std::runtime_error(err_str);
 }
 
 Demuxer::Demuxer(Demuxer&& rhs) noexcept
@@ -40,9 +43,9 @@ Demuxer::Demuxer(Demuxer&& rhs) noexcept
   rhs.ctx_ = nullptr;
 }
 
-Demuxer& Demuxer::operator=(Demuxer &&rhs) noexcept {
+Demuxer& Demuxer::operator=(Demuxer&& rhs) noexcept {
   if (this != &rhs) {
-    clear();
+    clean();
     ctx_ = rhs.ctx_;
     rhs.ctx_ = nullptr;
   }
@@ -50,14 +53,14 @@ Demuxer& Demuxer::operator=(Demuxer &&rhs) noexcept {
 }
 
 Demuxer::~Demuxer() {
-  clear();
+  clean();
 }
 
 int Demuxer::read_frame(AVPacket* pkt) {
   return av_read_frame(ctx_, pkt);
 }
 
-void Demuxer::clear() {
+void Demuxer::clean() {
   avformat_close_input(&ctx_);
 }
 
@@ -66,6 +69,7 @@ Muxer::Muxer(const char* url,
              const AVOutputFormat* fmt) {
   int rc;
   char err_msg[AV_ERROR_MAX_STRING_SIZE];
+  std::string err_str;
 
   rc = avformat_alloc_output_context2(&ctx_, fmt, fmt_name, url);
   if (rc < 0) {
@@ -83,9 +87,10 @@ Muxer::Muxer(const char* url,
   return;
 
 err_exit:
+  clean();
   av_strerror(rc, err_msg, sizeof(err_msg));
-  clear();
-  throw std::runtime_error(err_msg);
+  err_str.append("Muxer: ").append(err_msg);
+  throw std::runtime_error(err_str);
 }
 
 Muxer::Muxer(Muxer&& rhs) noexcept
@@ -97,7 +102,7 @@ Muxer::Muxer(Muxer&& rhs) noexcept
 
 Muxer& Muxer::operator=(Muxer&& rhs) noexcept {
   if (this != &rhs) {
-    clear();
+    clean();
 
     ctx_ = rhs.ctx_;
     need_close_ = rhs.need_close_;
@@ -110,7 +115,7 @@ Muxer& Muxer::operator=(Muxer&& rhs) noexcept {
 }
 
 Muxer::~Muxer() {
-  clear();
+  clean();
 }
 
 AVStream* Muxer::new_stream() {
@@ -136,7 +141,7 @@ int Muxer::interleaved_write_frame(AVPacket* pkt) {
   return av_interleaved_write_frame(ctx_, pkt);
 }
 
-void Muxer::clear() {
+void Muxer::clean() {
   if (ctx_) {
     if (need_trailer_) {
       av_write_trailer(ctx_);
