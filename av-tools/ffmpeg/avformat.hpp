@@ -21,7 +21,7 @@ class Demuxer {
   Demuxer& operator=(const Demuxer&) = delete;
 
   Demuxer(const char* url,
-          const AVInputFormat* fmt = nullptr,
+          const AVInputFormat* ifmt = nullptr,
           AVDictionary** opts = nullptr);
 
   Demuxer(Demuxer&& rhs) noexcept;
@@ -47,7 +47,7 @@ class Muxer {
 
   Muxer(const char* url,
         const char* fmt_name = nullptr,
-        const AVOutputFormat* fmt = nullptr);
+        const AVOutputFormat* ofmt = nullptr);
 
   Muxer(Muxer&& rhs) noexcept;
 

@@ -18,13 +18,14 @@ CodecBase::CodecBase(const AVCodec* codec) {
     throw std::runtime_error("CodecBase: Codec not found");
   }
 
-  if (!(ctx_ = avcodec_alloc_context3(codec_))) {
+  if (!(ctx_ = avcodec_alloc_context3(codec))) {
     throw std::runtime_error("CodecBase: Cannot allocate memory");
   }
 }
 
 CodecBase::CodecBase(CodecBase&& rhs) noexcept
-    : codec_(rhs.codec_), ctx_(rhs.ctx_), is_open_(rhs.is_open_) {
+    : codec_(rhs.codec_), ctx_(rhs.ctx_), is_open_(rhs.is_open_)
+{
   rhs.codec_ = nullptr;
   rhs.ctx_ = nullptr;
   rhs.is_open_ = false;

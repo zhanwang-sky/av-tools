@@ -13,13 +13,13 @@
 using namespace av::ffmpeg;
 
 Demuxer::Demuxer(const char* url,
-                 const AVInputFormat* fmt,
+                 const AVInputFormat* ifmt,
                  AVDictionary** opts) {
   int rc;
   char err_msg[AV_ERROR_MAX_STRING_SIZE];
   std::string err_str;
 
-  rc = avformat_open_input(&ctx_, url, fmt, opts);
+  rc = avformat_open_input(&ctx_, url, ifmt, opts);
   if (rc < 0) {
     goto err_exit;
   }
@@ -39,7 +39,8 @@ err_exit:
 }
 
 Demuxer::Demuxer(Demuxer&& rhs) noexcept
-    : ctx_(rhs.ctx_) {
+    : ctx_(rhs.ctx_)
+{
   rhs.ctx_ = nullptr;
 }
 
@@ -66,12 +67,12 @@ void Demuxer::clean() {
 
 Muxer::Muxer(const char* url,
              const char* fmt_name,
-             const AVOutputFormat* fmt) {
+             const AVOutputFormat* ofmt) {
   int rc;
   char err_msg[AV_ERROR_MAX_STRING_SIZE];
   std::string err_str;
 
-  rc = avformat_alloc_output_context2(&ctx_, fmt, fmt_name, url);
+  rc = avformat_alloc_output_context2(&ctx_, ofmt, fmt_name, url);
   if (rc < 0) {
     goto err_exit;
   }
@@ -96,7 +97,8 @@ err_exit:
 Muxer::Muxer(Muxer&& rhs) noexcept
     : ctx_(rhs.ctx_),
       need_close_(rhs.need_close_),
-      need_trailer_(rhs.need_trailer_) {
+      need_trailer_(rhs.need_trailer_)
+{
   rhs.ctx_ = nullptr;
 }
 
