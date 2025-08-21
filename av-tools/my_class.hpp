@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/4/17.
 //
 
-#ifndef my_class_hpp
-#define my_class_hpp
+#pragma once
 
 #include <cstdio>
 
@@ -54,5 +53,3 @@ class MyClass {
     printf("MyClass - call on CONST rvalue: %p\n", this);
   }
 };
-
-#endif /* my_class_hpp */
