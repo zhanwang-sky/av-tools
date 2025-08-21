@@ -7,7 +7,7 @@
 
 #include <cassert>
 #include <stdexcept>
-#include <utility>
+#include <string>
 
 #include "avcodec.hpp"
 
@@ -15,11 +15,11 @@ using namespace av::ffmpeg;
 
 CodecBase::CodecBase(const AVCodec* codec) {
   if (!(codec_ = codec)) {
-    throw std::runtime_error("Codec not found");
+    throw std::runtime_error("CodecBase: Codec not found");
   }
 
   if (!(ctx_ = avcodec_alloc_context3(codec_))) {
-    throw std::runtime_error("Cannot allocate memory");
+    throw std::runtime_error("CodecBase: Cannot allocate memory");
   }
 }
 
@@ -30,7 +30,7 @@ CodecBase::CodecBase(CodecBase&& rhs) noexcept
   rhs.is_open_ = false;
 }
 
-CodecBase& CodecBase::operator=(CodecBase &&rhs) noexcept {
+CodecBase& CodecBase::operator=(CodecBase&& rhs) noexcept {
   if (this != &rhs) {
     clean();
 
@@ -57,14 +57,16 @@ void CodecBase::clean() {
 
 void CodecBase::open(AVDictionary** opts) {
   int rc;
-  char err_msg[AV_ERROR_MAX_STRING_SIZE];
 
   assert(!is_open_);
 
   rc = avcodec_open2(ctx_, codec_, opts);
   if (rc < 0) {
+    std::string err_str = "CodecBase: ";
+    char err_msg[AV_ERROR_MAX_STRING_SIZE];
     av_strerror(rc, err_msg, sizeof(err_msg));
-    throw std::runtime_error(err_msg);
+    err_str += err_msg;
+    throw std::runtime_error(err_str);
   }
 
   is_open_ = true;
@@ -75,18 +77,6 @@ Decoder::Decoder(enum AVCodecID codec_id)
 
 Decoder::Decoder(const char* codec_name)
     : CodecBase(avcodec_find_decoder_by_name(codec_name)) { }
-
-Decoder::Decoder(Decoder&& rhs) noexcept
-    : CodecBase(std::move(rhs)) { }
-
-Decoder& Decoder::operator=(Decoder&& rhs) noexcept {
-  if (this != &rhs) {
-    CodecBase::operator=(std::move(rhs));
-  }
-  return *this;
-}
-
-Decoder::~Decoder() { }
 
 int Decoder::send_packet(const AVPacket* pkt) {
   assert(is_open_);
@@ -103,18 +93,6 @@ Encoder::Encoder(enum AVCodecID codec_id)
 
 Encoder::Encoder(const char* codec_name)
     : CodecBase(avcodec_find_encoder_by_name(codec_name)) { }
-
-Encoder::Encoder(Encoder&& rhs) noexcept
-    : CodecBase(std::move(rhs)) { }
-
-Encoder& Encoder::operator=(Encoder &&rhs) noexcept {
-  if (this != &rhs) {
-    CodecBase::operator=(std::move(rhs));
-  }
-  return *this;
-}
-
-Encoder::~Encoder() { }
 
 int Encoder::send_frame(const AVFrame* frame) {
   assert(is_open_);

@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/2/11.
 //
 
-#ifndef avcodec_hpp
-#define avcodec_hpp
+#pragma once
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -49,11 +48,11 @@ class Decoder : public CodecBase {
 
   Decoder(const char* codec_name);
 
-  Decoder(Decoder&& rhs) noexcept;
+  Decoder(Decoder&& rhs) = default;
 
-  Decoder& operator=(Decoder&& rhs) noexcept;
+  Decoder& operator=(Decoder&& rhs) = default;
 
-  virtual ~Decoder();
+  virtual ~Decoder() = default;
 
   int send_packet(const AVPacket* pkt);
 
@@ -66,11 +65,11 @@ class Encoder : public CodecBase {
 
   Encoder(const char* codec_name);
 
-  Encoder(Encoder&& rhs) noexcept;
+  Encoder(Encoder&& rhs) = default;
 
-  Encoder& operator=(Encoder&& rhs) noexcept;
+  Encoder& operator=(Encoder&& rhs) = default;
 
-  virtual ~Encoder();
+  virtual ~Encoder() = default;
 
   int send_frame(const AVFrame* frame);
 
@@ -80,5 +79,3 @@ class Encoder : public CodecBase {
 } // ffmpeg
 
 } // av
-
-#endif /* avcodec_hpp */
