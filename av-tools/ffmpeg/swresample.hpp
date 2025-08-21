@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/3/5.
 //
 
-#ifndef swresample_hpp
-#define swresample_hpp
+#pragma once
 
 extern "C" {
 #include <libavutil/audio_fifo.h>
@@ -31,8 +30,7 @@ class Resampler {
 
   virtual ~Resampler();
 
-  int resample(const uint8_t* const* in_samples_buf, int in_samples,
-               AVAudioFifo* af);
+  int resample(const uint8_t* const* in_samples_buf, int in_samples, AVAudioFifo* af);
 
  protected:
   virtual void clean();
@@ -54,5 +52,3 @@ class Resampler {
 } // ffmpeg
 
 } // av
-
-#endif /* swresample_hpp */

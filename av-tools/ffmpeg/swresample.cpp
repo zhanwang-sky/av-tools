@@ -6,6 +6,7 @@
 //
 
 #include <stdexcept>
+#include <string>
 
 #include "swresample.hpp"
 
@@ -14,9 +15,11 @@ using namespace av::ffmpeg;
 Resampler::Resampler(const AVChannelLayout& in_ch_layout, enum AVSampleFormat in_sample_fmt, int in_sample_rate,
                      const AVChannelLayout& out_ch_layout, enum AVSampleFormat out_sample_fmt, int out_sample_rate)
     : in_ch_layout_(in_ch_layout), in_sample_fmt_(in_sample_fmt), in_sample_rate_(in_sample_rate),
-      out_ch_layout_(out_ch_layout), out_sample_fmt_(out_sample_fmt), out_sample_rate_(out_sample_rate) {
+      out_ch_layout_(out_ch_layout), out_sample_fmt_(out_sample_fmt), out_sample_rate_(out_sample_rate)
+{
   int rc;
   char err_msg[AV_ERROR_MAX_STRING_SIZE];
+  std::string err_str;
 
   rc = swr_alloc_set_opts2(&swr_,
                            &out_ch_layout, out_sample_fmt, out_sample_rate,
@@ -34,19 +37,17 @@ Resampler::Resampler(const AVChannelLayout& in_ch_layout, enum AVSampleFormat in
   return;
 
 err_exit:
+  clean();
   av_strerror(rc, err_msg, sizeof(err_msg));
-  clean();
-  throw std::runtime_error(err_msg);
-}
-
-Resampler::~Resampler() {
-  clean();
+  err_str.append("Resampler: ").append(err_msg);
+  throw std::runtime_error(err_str);
 }
 
 Resampler::Resampler(Resampler&& rhs) noexcept
     : in_ch_layout_(rhs.in_ch_layout_), in_sample_fmt_(rhs.in_sample_fmt_), in_sample_rate_(rhs.in_sample_rate_),
       out_ch_layout_(rhs.out_ch_layout_), out_sample_fmt_(rhs.out_sample_fmt_), out_sample_rate_(rhs.out_sample_rate_),
-      swr_(rhs.swr_), samples_buf_(rhs.samples_buf_), samples_(rhs.samples_) {
+      swr_(rhs.swr_), samples_buf_(rhs.samples_buf_), samples_(rhs.samples_)
+{
   rhs.swr_ = nullptr;
   rhs.samples_buf_ = nullptr;
   rhs.samples_ = 0;
@@ -74,17 +75,11 @@ Resampler& Resampler::operator=(Resampler&& rhs) noexcept {
   return *this;
 }
 
-void Resampler::clean() {
-  samples_ = 0;
-  if (samples_buf_) {
-    av_freep(&samples_buf_[0]);
-  }
-  av_freep(&samples_buf_);
-  swr_free(&swr_);
+Resampler::~Resampler() {
+  clean();
 }
 
-int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples,
-                        AVAudioFifo* af) {
+int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples, AVAudioFifo* af) {
   int out_samples;
   int rc;
 
@@ -125,7 +120,7 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples,
 
   out_samples = swr_convert(swr_,
                             samples_buf_, samples_,
-                            const_cast<const uint8_t**>(in_samples_buf), in_samples);
+                            in_samples_buf, in_samples);
   if (out_samples < 0) {
     return out_samples;
   }
@@ -140,4 +135,13 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples,
   }
 
   return out_samples;
+}
+
+void Resampler::clean() {
+  samples_ = 0;
+  if (samples_buf_) {
+    av_freep(&samples_buf_[0]);
+  }
+  av_freep(&samples_buf_);
+  swr_free(&swr_);
 }
