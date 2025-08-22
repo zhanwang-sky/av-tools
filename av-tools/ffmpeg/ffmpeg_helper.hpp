@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <memory>
+#include <span>
 #include <vector>
 #include "avcodec.hpp"
 #include "avformat.hpp"
@@ -18,20 +19,28 @@ namespace av {
 namespace ffmpeg {
 
 struct DecodeHelper {
-  using on_read_cb = std::function<bool(unsigned, AVPacket*, AVFrame*)>;
+  using packet_callback = std::function<bool(AVPacket*)>;
+  using frame_callback = std::function<void(unsigned int, AVFrame*)>;
 
-  DecodeHelper(const char* filename,
-               const AVInputFormat* fmt = nullptr,
+  DecodeHelper(packet_callback&& pkt_cb,
+               frame_callback&& frame_cb,
+               const char* filename,
+               const AVInputFormat* ifmt = nullptr,
                AVDictionary** opts = nullptr);
 
-  int read(on_read_cb&& on_read);
+  virtual ~DecodeHelper() = default;
 
-  int flush(unsigned stream_id, on_read_cb&& on_read);
+  int read();
 
-  static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
+  void flush(std::span<const unsigned int> ids);
+
   static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
-  std::unique_ptr<AVFrame, decltype(frame_deleter)> frame_;
+  static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
+
+  packet_callback pkt_cb_;
+  frame_callback frame_cb_;
   std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
+  std::unique_ptr<AVFrame, decltype(frame_deleter)> frame_;
   std::vector<Decoder> decoders_;
   Demuxer demuxer_;
 };

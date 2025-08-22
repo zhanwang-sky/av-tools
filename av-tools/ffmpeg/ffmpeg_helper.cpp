@@ -6,81 +6,101 @@
 //
 
 #include <stdexcept>
+#include <utility>
 #include "ffmpeg_helper.hpp"
 
 using namespace av::ffmpeg;
 
-DecodeHelper::DecodeHelper(const char* filename,
-                           const AVInputFormat* fmt,
+DecodeHelper::DecodeHelper(packet_callback&& pkt_cb,
+                           frame_callback&& frame_cb,
+                           const char* filename,
+                           const AVInputFormat* ifmt,
                            AVDictionary** opts)
-    : frame_(av_frame_alloc(), frame_deleter),
+    : pkt_cb_(std::move(pkt_cb)),
+      frame_cb_(std::move(frame_cb)),
       pkt_(av_packet_alloc(), pkt_deleter),
-      demuxer_(filename, fmt, opts) {
-  if (!frame_ || !pkt_) {
-    throw std::runtime_error("DecodeHelper: fail to alloc objects");
+      frame_(av_frame_alloc(), frame_deleter),
+      demuxer_(filename, ifmt, opts)
+{
+  if (!pkt_ || !frame_) {
+    throw std::runtime_error("DecodeHelper: Cannot allocate memory");
   }
 
   AVFormatContext* demux_ctx = demuxer_.ctx();
 
-  for (unsigned i = 0; i != demux_ctx->nb_streams; ++i) {
+  for (unsigned int i = 0; i != demux_ctx->nb_streams; ++i) {
     AVStream* st = demux_ctx->streams[i];
     auto& decoder = decoders_.emplace_back(st->codecpar->codec_id);
     AVCodecContext* decode_ctx = decoder.ctx();
-    if (avcodec_parameters_to_context(decode_ctx, st->codecpar) < 0) {
-      throw std::runtime_error("DecodeHelper: fail to copy codecpar to decoder");
+    int rc = avcodec_parameters_to_context(decode_ctx, st->codecpar);
+    if (rc < 0) {
+      char err_msg[AV_ERROR_MAX_STRING_SIZE << 1];
+      int msg_len = snprintf(err_msg, sizeof(err_msg), "%s", "DecodeHelper: ");
+      av_strerror(rc, err_msg + msg_len, sizeof(err_msg) - msg_len);
+      throw std::runtime_error(err_msg);
     }
     decode_ctx->pkt_timebase = st->time_base;
     decoder.open();
   }
 }
 
-int DecodeHelper::read(on_read_cb&& on_read) {
-  int rc = 0;
+int DecodeHelper::read() {
+  int rc;
 
   rc = demuxer_.read_frame(pkt_.get());
-  if (rc == AVERROR_EOF) {
-    return 0;
-  } else if (rc < 0) {
-    return -1;
+  if (rc < 0) {
+    if (rc == AVERROR_EOF) {
+      return 0;
+    }
+    return rc;
   }
 
-  if (on_read(pkt_->stream_index, pkt_.get(), nullptr)) {
-    auto& decoder = decoders_[pkt_->stream_index];
+  do {
+    auto& decoder = decoders_.at(pkt_->stream_index);
+
+    if (!pkt_cb_(pkt_.get())) {
+      rc = 1;
+      break;
+    }
+
     rc = decoder.send_packet(pkt_.get());
-    while (rc == 0) {
+    if (rc < 0) {
+      break;
+    }
+
+    for (;;) {
       rc = decoder.receive_frame(frame_.get());
       if (rc < 0) {
         if (rc == AVERROR(EAGAIN)) {
-          rc = 0;
+          rc = 1;
         }
         break;
       }
-      on_read(pkt_->stream_index, pkt_.get(), frame_.get());
+      frame_cb_(pkt_->stream_index, frame_.get());
     }
-  }
+
+  } while (0);
 
   av_packet_unref(pkt_.get());
 
-  return (rc == 0) ? 1 : -1;
+  return rc;
 }
 
-int DecodeHelper::flush(unsigned stream_id, on_read_cb&& on_read) {
-  auto& decoder = decoders_[stream_id];
-  int rc = 0;
-
-  rc = decoder.send_packet(nullptr);
-  while (rc == 0) {
-    rc = decoder.receive_frame(frame_.get());
+void DecodeHelper::flush(std::span<const unsigned int> ids) {
+  for (auto id : ids) {
+    auto& decoder = decoders_.at(id);
+    int rc = decoder.send_packet(nullptr);
     if (rc < 0) {
-      if (rc == AVERROR_EOF) {
-        rc = 0;
-      }
-      break;
+      continue;
     }
-    on_read(stream_id, nullptr, frame_.get());
+    for (;;) {
+      rc = decoder.receive_frame(frame_.get());
+      if (rc < 0) {
+        continue;
+      }
+      frame_cb_(id, frame_.get());
+    }
   }
-
-  return (rc == 0) ? 0 : -1;
 }
 
 std::unique_ptr<EncodeHelper>

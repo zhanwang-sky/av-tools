@@ -26,6 +26,7 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+#if 0
 int transcode(const char* input_file, const char* output_file) {
   const AVInputFormat* input_fmt = nullptr;
   AVDictionary* input_opts = nullptr;
@@ -213,3 +214,4 @@ int transcode(const char* input_file, const char* output_file) {
 
   return ret;
 }
+#endif
