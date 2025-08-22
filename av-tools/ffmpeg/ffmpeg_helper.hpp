@@ -5,8 +5,7 @@
 //  Created by zhanwang-sky on 2025/3/14.
 //
 
-#ifndef ffmpeg_helper_hpp
-#define ffmpeg_helper_hpp
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -59,5 +58,3 @@ struct EncodeHelper {
 } // ffmpeg
 
 } // av
-
-#endif /* ffmpeg_helper_hpp */
