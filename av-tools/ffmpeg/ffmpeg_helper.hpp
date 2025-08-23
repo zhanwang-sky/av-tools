@@ -28,7 +28,7 @@ struct DecodeHelper {
                const AVInputFormat* ifmt = nullptr,
                AVDictionary** opts = nullptr);
 
-  virtual ~DecodeHelper() = default;
+  ~DecodeHelper() = default;
 
   int read();
 
@@ -46,22 +46,21 @@ struct DecodeHelper {
 };
 
 struct EncodeHelper {
-  using on_stream_cb = std::function<void(Muxer&, Encoder&, AVStream*, unsigned)>;
-  using on_write_cb = std::function<bool(unsigned, AVFrame*, AVPacket*)>;
+  using packet_callback = std::function<void(AVPacket*)>;
 
-  static std::unique_ptr<EncodeHelper>
-  FromCodecID(const char* filename,
-              const std::vector<AVCodecID>& vid,
-              on_stream_cb&& on_stream) noexcept(false);
+  EncodeHelper(enum AVCodecID codec_id, packet_callback&& pkt_cb);
 
-  EncodeHelper(const char* filename);
+  EncodeHelper(const char* codec_name, packet_callback&& pkt_cb);
 
-  int write(unsigned stream_id, AVFrame* frame, on_write_cb&& on_write);
+  ~EncodeHelper() = default;
+
+  int encode(const AVFrame* frame);
 
   static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
+
+  Encoder encoder_;
   std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
-  std::vector<Encoder> encoders_;
-  Muxer muxer_;
+  packet_callback pkt_cb_;
 };
 
 } // ffmpeg

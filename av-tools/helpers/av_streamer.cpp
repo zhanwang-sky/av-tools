@@ -14,6 +14,8 @@
 
 using namespace av::ffmpeg;
 
+#if 0
+
 struct av_streamer {
   struct ChLayoutHelper {
     ChLayoutHelper(int nb_channels) {
@@ -177,3 +179,5 @@ int av_streamer_write_samples(av_streamer_t* p_streamer,
 
   return 0;
 }
+
+#endif

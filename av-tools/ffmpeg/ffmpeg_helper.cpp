@@ -103,54 +103,42 @@ void DecodeHelper::flush(std::span<const unsigned int> ids) {
   }
 }
 
-std::unique_ptr<EncodeHelper>
-EncodeHelper::FromCodecID(const char* filename,
-                          const std::vector<AVCodecID>& vid,
-                          on_stream_cb&& on_stream) noexcept(false) {
-  auto p_helper = std::make_unique<EncodeHelper>(filename);
-  auto& muxer = p_helper->muxer_;
-
-  for (std::size_t i = 0; i != vid.size(); ++i) {
-    auto& encoder = p_helper->encoders_.emplace_back(vid[i]);
-    AVStream* st = muxer.new_stream();
-    if (!st) {
-      throw std::runtime_error("FromCodecID: fail to create output stream");
-    }
-    on_stream(muxer, encoder, st, static_cast<unsigned>(i));
-  }
-
-  return p_helper;
-}
-
-EncodeHelper::EncodeHelper(const char* filename)
-    : pkt_(av_packet_alloc(), pkt_deleter),
-      muxer_(filename) {
+EncodeHelper::EncodeHelper(enum AVCodecID codec_id, packet_callback&& pkt_cb)
+    : encoder_(codec_id),
+      pkt_(av_packet_alloc(), pkt_deleter),
+      pkt_cb_(std::move(pkt_cb))
+{
   if (!pkt_) {
-    throw std::runtime_error("EncodeHelper: fail to alloc objects");
+    throw std::runtime_error("EncodeHelper: Cannot allocate memory");
   }
 }
 
-int EncodeHelper::write(unsigned stream_id,
-                        AVFrame* frame,
-                        on_write_cb&& on_write) {
-  auto& encoder = encoders_[stream_id];
-  int rc = 0;
-  int pkt_cnt = 0;
+EncodeHelper::EncodeHelper(const char* codec_name, packet_callback&& pkt_cb)
+    : encoder_(codec_name),
+      pkt_(av_packet_alloc(), pkt_deleter),
+      pkt_cb_(std::move(pkt_cb))
+{
+  if (!pkt_) {
+    throw std::runtime_error("EncodeHelper: Cannot allocate memory");
+  }
+}
 
-  rc = encoder.send_frame(frame);
-  while (rc == 0) {
-    rc = encoder.receive_packet(pkt_.get());
+int EncodeHelper::encode(const AVFrame* frame) {
+  int rc = encoder_.send_frame(frame);
+  if (rc < 0) {
+    return rc;
+  }
+
+  for (;;) {
+    rc = encoder_.receive_packet(pkt_.get());
     if (rc < 0) {
       if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
         rc = 0;
       }
-      break;
+      return rc;
     }
-    ++pkt_cnt;
-    if (on_write(stream_id, frame, pkt_.get())) {
-      rc = muxer_.interleaved_write_frame(pkt_.get());
-    }
+    pkt_cb_(pkt_.get());
   }
 
-  return (rc == 0) ? pkt_cnt : -1;
+  return 1;
 }
