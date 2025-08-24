@@ -73,3 +73,13 @@ struct av_streamer {
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;
 };
+
+av_streamer_t* av_streamer_alloc(const char* url, int sample_rate, int nb_channels) {
+  try {
+    return new(std::nothrow) av_streamer(url, sample_rate, nb_channels);
+  } catch (...) { return nullptr; }
+}
+
+void av_streamer_free(av_streamer_t* p_streamer) {
+  delete p_streamer;
+}
