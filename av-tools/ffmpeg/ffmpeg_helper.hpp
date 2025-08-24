@@ -13,6 +13,7 @@
 #include <vector>
 #include "avcodec.hpp"
 #include "avformat.hpp"
+#include "swresample.hpp"
 
 namespace av {
 

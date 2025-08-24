@@ -15,9 +15,12 @@ using namespace av::ffmpeg;
 
 struct av_streamer {
  public:
-  av_streamer(const char* url, int nb_channels, int sample_rate)
+  av_streamer(const char* url, int ar, int ac,
+              enum AVCodecID acodec = AV_CODEC_ID_AAC,
+              int64_t ab = 0,
+              enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP)
       : muxer_(url),
-        audio_encode_helper_(AV_CODEC_ID_PCM_S16LE,
+        audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
                                        std::placeholders::_1)),
@@ -27,11 +30,11 @@ struct av_streamer {
     AVFormatContext* mux_ctx = muxer_.ctx();
 
     // setup audio encoder
-    // audio_enc_ctx_->bit_rate = 0;
-    audio_enc_ctx_->time_base = av_make_q(1, sample_rate);
-    audio_enc_ctx_->sample_rate = sample_rate;
-    audio_enc_ctx_->sample_fmt = AV_SAMPLE_FMT_S16;
-    av_channel_layout_default(&audio_enc_ctx_->ch_layout, nb_channels);
+    audio_enc_ctx_->bit_rate = ab;
+    audio_enc_ctx_->time_base = av_make_q(1, ar);
+    audio_enc_ctx_->sample_rate = ar;
+    audio_enc_ctx_->sample_fmt = sample_fmt;
+    av_channel_layout_default(&audio_enc_ctx_->ch_layout, ac);
     if (mux_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
       audio_enc_ctx_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
