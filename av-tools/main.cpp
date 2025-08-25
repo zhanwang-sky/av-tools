@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  auto p_streamer = av_streamer_alloc(argv[1], 8000, 2);
+  auto p_streamer = av_streamer_alloc(8000, 2, argv[1]);
   av_streamer_free(p_streamer);
 
   return 0;
