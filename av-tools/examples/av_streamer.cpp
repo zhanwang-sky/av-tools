@@ -6,6 +6,7 @@
 //
 
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include "ffmpeg_helper.hpp"
 
@@ -15,7 +16,9 @@ using namespace av::ffmpeg;
 
 struct av_streamer {
  public:
-  av_streamer(const char* url, int ar, int ac,
+  av_streamer(int sample_rate, int nb_channels, const char* url,
+              int ar = 16000,
+              int ac = 1,
               enum AVCodecID acodec = AV_CODEC_ID_AAC,
               int64_t ab = 0,
               enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP)
@@ -24,28 +27,37 @@ struct av_streamer {
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
                                        std::placeholders::_1)),
-        audio_encoder_(audio_encode_helper_.encoder_),
-        audio_enc_ctx_(audio_encoder_.ctx())
+        resampler_(get_ch_layout(nb_channels), AV_SAMPLE_FMT_S16, sample_rate,
+                   get_ch_layout(ac), sample_fmt, ar),
+        audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar),
+                    &av_audio_fifo_free),
+        audio_frame_(av_frame_alloc(), frame_deleter)
   {
+    if (!audio_fifo_ || !audio_frame_) {
+      throw std::runtime_error("error allocating objects");
+    }
+
     AVFormatContext* mux_ctx = muxer_.ctx();
+    auto& audio_encoder = audio_encode_helper_.encoder_;
+    AVCodecContext* audio_enc_ctx = audio_encoder.ctx();
 
     // setup audio encoder
-    audio_enc_ctx_->bit_rate = ab;
-    audio_enc_ctx_->time_base = av_make_q(1, ar);
-    audio_enc_ctx_->sample_rate = ar;
-    audio_enc_ctx_->sample_fmt = sample_fmt;
-    av_channel_layout_default(&audio_enc_ctx_->ch_layout, ac);
+    audio_enc_ctx->bit_rate = ab;
+    audio_enc_ctx->time_base = av_make_q(1, ar);
+    audio_enc_ctx->sample_rate = ar;
+    audio_enc_ctx->sample_fmt = sample_fmt;
+    av_channel_layout_default(&audio_enc_ctx->ch_layout, ac);
     if (mux_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
-      audio_enc_ctx_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+      audio_enc_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
-    audio_encoder_.open();
+    audio_encoder.open();
 
     // setup audio stream
     audio_stream_ = muxer_.new_stream();
     if (!audio_stream_) {
       throw std::runtime_error("av_streamer: error creating audio_stream");
     }
-    if (avcodec_parameters_from_context(audio_stream_->codecpar, audio_enc_ctx_) < 0) {
+    if (avcodec_parameters_from_context(audio_stream_->codecpar, audio_enc_ctx) < 0) {
       throw std::runtime_error("av_streamer: error copying audio_codecpar");
     }
     audio_stream_->time_base = av_make_q(1, 1000); // 1ms for flv
@@ -58,18 +70,28 @@ struct av_streamer {
   ~av_streamer() = default;
 
  private:
+  static AVChannelLayout get_ch_layout(int ac) {
+    AVChannelLayout layout;
+    av_channel_layout_default(&layout, ac);
+    return layout;
+  }
+
   void on_audio_pkt(AVPacket* pkt) {
-    av_packet_rescale_ts(pkt, audio_enc_ctx_->time_base, audio_stream_->time_base);
+    AVCodecContext* audio_enc_ctx = audio_encode_helper_.encoder_.ctx();
+    av_packet_rescale_ts(pkt, audio_enc_ctx->time_base, audio_stream_->time_base);
     pkt->stream_index = audio_stream_->index;
     if (muxer_.interleaved_write_frame(pkt) < 0) {
       throw std::runtime_error("av_streamer: error writing audio_packet");
     }
   }
 
+  static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
+
   Muxer muxer_;
   EncodeHelper audio_encode_helper_;
-  Encoder& audio_encoder_;
-  AVCodecContext* audio_enc_ctx_;
+  Resampler resampler_;
+  std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
+  std::unique_ptr<AVFrame, decltype(frame_deleter)> audio_frame_;
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;
 };
@@ -77,7 +99,7 @@ struct av_streamer {
 av_streamer_t* av_streamer_alloc(int sample_rate, int nb_channels,
                                  const char* url) {
   try {
-    return new(std::nothrow) av_streamer(url, sample_rate, nb_channels);
+    return new av_streamer(sample_rate, nb_channels, url);
   } catch (...) { return nullptr; }
 }
 

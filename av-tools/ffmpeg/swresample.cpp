@@ -88,8 +88,7 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples, AV
     return out_samples;
   }
 
-  // at least 320 samples to alloc
-  out_samples = FFMAX(out_samples, 320);
+  out_samples = FFMAX(out_samples, out_sample_rate_);
 
   // realloc
   if (samples_ < out_samples) {
