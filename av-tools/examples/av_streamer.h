@@ -19,9 +19,9 @@ av_streamer_t* av_streamer_alloc(int sample_rate, int nb_channels,
 
 void av_streamer_free(av_streamer_t* p_streamer);
 
-int av_streamer_write_samples(av_streamer_t* p_streamer,
-                              const unsigned char* audio_data,
-                              int nb_samples);
+int av_streamer_write_audio(av_streamer_t* p_streamer,
+                            const unsigned char* audio_data,
+                            int nb_samples);
 
 #ifdef __cplusplus
 }

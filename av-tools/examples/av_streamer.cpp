@@ -110,9 +110,12 @@ struct av_streamer {
       int rc = av_audio_fifo_read(audio_fifo_.get(),
                                   reinterpret_cast<void* const*>(audio_frame_->data),
                                   frame_size);
-      if (rc < frame_size) {
+      if (rc != frame_size) {
         throw std::runtime_error("av_streamer: error reading audio_fifo");
       }
+
+      audio_frame_->pts = audio_pts_;
+      audio_pts_ += frame_size;
 
       if (audio_encode_helper_.encode(audio_frame_.get()) < 0) {
         throw std::runtime_error("av_streamer: error encoding audio_frame");
@@ -150,4 +153,14 @@ av_streamer_t* av_streamer_alloc(int sample_rate, int nb_channels,
 
 void av_streamer_free(av_streamer_t* p_streamer) {
   delete p_streamer;
+}
+
+int av_streamer_write_audio(av_streamer_t* p_streamer,
+                            const unsigned char* audio_data,
+                            int nb_samples) {
+  try {
+    const uint8_t* data[1] = {audio_data};
+    p_streamer->write_audio(data, nb_samples);
+    return 0;
+  } catch (...) { return -1; }
 }
