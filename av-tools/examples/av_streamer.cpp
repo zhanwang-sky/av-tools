@@ -27,8 +27,8 @@ struct av_streamer {
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
                                        std::placeholders::_1)),
-        resampler_(get_ch_layout(nb_channels), AV_SAMPLE_FMT_S16, sample_rate,
-                   get_ch_layout(ac), sample_fmt, ar),
+        resampler_(sample_rate, get_ch_layout(nb_channels), AV_SAMPLE_FMT_S16,
+                   ar, get_ch_layout(ac), sample_fmt),
         audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar),
                     &av_audio_fifo_free),
         audio_frame_(av_frame_alloc(), frame_deleter)

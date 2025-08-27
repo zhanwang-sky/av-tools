@@ -21,8 +21,8 @@ class Resampler {
   Resampler(const Resampler&) = delete;
   Resampler& operator=(const Resampler&) = delete;
 
-  explicit Resampler(const AVChannelLayout& in_ch_layout, enum AVSampleFormat in_sample_fmt, int in_sample_rate,
-                     const AVChannelLayout& out_ch_layout, enum AVSampleFormat out_sample_fmt, int out_sample_rate);
+  explicit Resampler(int in_sample_rate, const AVChannelLayout& in_ch_layout, enum AVSampleFormat in_sample_fmt,
+                     int out_sample_rate, const AVChannelLayout& out_ch_layout, enum AVSampleFormat out_sample_fmt);
 
   Resampler(Resampler&& rhs) noexcept;
 
@@ -34,16 +34,15 @@ class Resampler {
 
  protected:
   virtual void clean();
+  virtual void reset();
 
  private:
-  AVChannelLayout in_ch_layout_;
-  enum AVSampleFormat in_sample_fmt_;
   int in_sample_rate_;
-
-  AVChannelLayout out_ch_layout_;
-  enum AVSampleFormat out_sample_fmt_;
   int out_sample_rate_;
-
+  enum AVSampleFormat in_sample_fmt_;
+  enum AVSampleFormat out_sample_fmt_;
+  AVChannelLayout in_ch_layout_{};
+  AVChannelLayout out_ch_layout_{};
   struct SwrContext* swr_ = nullptr;
   uint8_t** samples_buf_ = nullptr;
   int samples_ = 0;
