@@ -69,6 +69,43 @@ struct av_streamer {
 
   ~av_streamer() = default;
 
+  void write_audio(const uint8_t* const* data, int nb_samples) {
+    if (resampler_.resample(data, nb_samples, audio_fifo_.get()) < 0) {
+      throw std::runtime_error("av_streamer: error resampling audio_data");
+    }
+
+    AVCodecContext* audio_enc_ctx = audio_encode_helper_.encoder_.ctx();
+    int frame_size = audio_enc_ctx->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE ?
+                     audio_enc_ctx->sample_rate : audio_enc_ctx->frame_size;
+
+    while (av_audio_fifo_size(audio_fifo_.get()) >= frame_size) {
+      if (audio_frame_->nb_samples != frame_size) {
+        av_frame_unref(audio_frame_.get());
+        audio_frame_->nb_samples = frame_size;
+        audio_frame_->format = audio_enc_ctx->sample_fmt;
+        av_channel_layout_copy(&audio_frame_->ch_layout, &audio_enc_ctx->ch_layout);
+        if (av_frame_get_buffer(audio_frame_.get(), 0) < 0) {
+          throw std::runtime_error("av_streamer: error getting audio_buffer");
+        }
+      } else {
+        if (av_frame_make_writable(audio_frame_.get()) < 0) {
+          throw std::runtime_error("av_streamer: error copying audio_buffer");
+        }
+      }
+
+      int rc = av_audio_fifo_read(audio_fifo_.get(),
+                                  reinterpret_cast<void* const*>(audio_frame_->data),
+                                  frame_size);
+      if (rc < frame_size) {
+        throw std::runtime_error("av_streamer: error reading audio_fifo");
+      }
+
+      if (audio_encode_helper_.encode(audio_frame_.get()) < 0) {
+        throw std::runtime_error("av_streamer: error encoding audio_frame");
+      }
+    }
+  }
+
  private:
   static AVChannelLayout get_ch_layout(int ac) {
     AVChannelLayout layout;

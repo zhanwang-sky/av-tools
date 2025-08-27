@@ -135,10 +135,10 @@ int EncodeHelper::encode(const AVFrame* frame) {
       if ((rc == AVERROR(EAGAIN)) || (rc == AVERROR_EOF)) {
         rc = 0;
       }
-      return rc;
+      break;
     }
     pkt_cb_(pkt_.get());
   }
 
-  return 1;
+  return rc;
 }
