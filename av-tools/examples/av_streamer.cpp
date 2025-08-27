@@ -15,6 +15,20 @@
 using namespace av::ffmpeg;
 
 struct av_streamer {
+  struct ChannelLayout {
+    ChannelLayout(int ac = 1) {
+      av_channel_layout_default(&layout_, ac);
+    }
+
+    ~ChannelLayout() {
+      av_channel_layout_uninit(&layout_);
+    }
+
+    inline const AVChannelLayout& get() const { return layout_; }
+
+    AVChannelLayout layout_{};
+  };
+
  public:
   av_streamer(int sample_rate, int nb_channels, const char* url,
               int ar = 16000,
@@ -27,8 +41,8 @@ struct av_streamer {
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
                                        std::placeholders::_1)),
-        resampler_(sample_rate, get_ch_layout(nb_channels), AV_SAMPLE_FMT_S16,
-                   ar, get_ch_layout(ac), sample_fmt),
+        resampler_(sample_rate, ChannelLayout{nb_channels}.get(), AV_SAMPLE_FMT_S16,
+                   ar, ChannelLayout{ac}.get(), sample_fmt),
         audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar),
                     &av_audio_fifo_free),
         audio_frame_(av_frame_alloc(), frame_deleter)
@@ -107,12 +121,6 @@ struct av_streamer {
   }
 
  private:
-  static AVChannelLayout get_ch_layout(int ac) {
-    AVChannelLayout layout;
-    av_channel_layout_default(&layout, ac);
-    return layout;
-  }
-
   void on_audio_pkt(AVPacket* pkt) {
     AVCodecContext* audio_enc_ctx = audio_encode_helper_.encoder_.ctx();
     av_packet_rescale_ts(pkt, audio_enc_ctx->time_base, audio_stream_->time_base);
