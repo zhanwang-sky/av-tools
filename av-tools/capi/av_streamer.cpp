@@ -36,7 +36,7 @@ struct av_streamer {
               enum AVCodecID acodec = AV_CODEC_ID_AAC,
               int64_t ab = 0,
               enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP)
-      : muxer_(url),
+      : muxer_(url, "flv"),
         audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
