@@ -133,7 +133,8 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples, AV
 
   out_samples = swr_convert(swr_,
                             samples_buf_, samples_,
-                            in_samples_buf, in_samples);
+                            const_cast<const uint8_t**>(in_samples_buf), in_samples);
+                            // XXX TODO: for latest ffmpeg, remove const_cast<>
   if (out_samples < 0) {
     return out_samples;
   }
