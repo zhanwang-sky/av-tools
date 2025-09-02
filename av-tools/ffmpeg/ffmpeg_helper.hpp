@@ -19,6 +19,10 @@ namespace av {
 
 namespace ffmpeg {
 
+inline void frame_deleter(AVFrame* frame) { av_frame_free(&frame); }
+
+inline void pkt_deleter(AVPacket* pkt) { av_packet_free(&pkt); }
+
 struct DecodeHelper {
   using packet_callback = std::function<bool(AVPacket*)>;
   using frame_callback = std::function<void(unsigned int, AVFrame*)>;
@@ -35,13 +39,10 @@ struct DecodeHelper {
 
   void flush(std::span<const unsigned int> ids);
 
-  static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
-  static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
-
   packet_callback pkt_cb_;
   frame_callback frame_cb_;
-  std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
-  std::unique_ptr<AVFrame, decltype(frame_deleter)> frame_;
+  std::unique_ptr<AVPacket, decltype(&pkt_deleter)> pkt_;
+  std::unique_ptr<AVFrame, decltype(&frame_deleter)> frame_;
   std::vector<Decoder> decoders_;
   Demuxer demuxer_;
 };
@@ -57,10 +58,8 @@ struct EncodeHelper {
 
   int encode(const AVFrame* frame);
 
-  static constexpr auto pkt_deleter = [](AVPacket* pkt) { av_packet_free(&pkt); };
-
   Encoder encoder_;
-  std::unique_ptr<AVPacket, decltype(pkt_deleter)> pkt_;
+  std::unique_ptr<AVPacket, decltype(&pkt_deleter)> pkt_;
   packet_callback pkt_cb_;
 };
 

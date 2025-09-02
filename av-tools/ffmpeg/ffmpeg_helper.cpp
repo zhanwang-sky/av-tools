@@ -18,8 +18,8 @@ DecodeHelper::DecodeHelper(packet_callback&& pkt_cb,
                            AVDictionary** opts)
     : pkt_cb_(std::move(pkt_cb)),
       frame_cb_(std::move(frame_cb)),
-      pkt_(av_packet_alloc(), pkt_deleter),
-      frame_(av_frame_alloc(), frame_deleter),
+      pkt_(av_packet_alloc(), &pkt_deleter),
+      frame_(av_frame_alloc(), &frame_deleter),
       demuxer_(filename, ifmt, opts)
 {
   if (!pkt_ || !frame_) {
@@ -105,7 +105,7 @@ void DecodeHelper::flush(std::span<const unsigned int> ids) {
 
 EncodeHelper::EncodeHelper(enum AVCodecID codec_id, packet_callback&& pkt_cb)
     : encoder_(codec_id),
-      pkt_(av_packet_alloc(), pkt_deleter),
+      pkt_(av_packet_alloc(), &pkt_deleter),
       pkt_cb_(std::move(pkt_cb))
 {
   if (!pkt_) {
@@ -115,7 +115,7 @@ EncodeHelper::EncodeHelper(enum AVCodecID codec_id, packet_callback&& pkt_cb)
 
 EncodeHelper::EncodeHelper(const char* codec_name, packet_callback&& pkt_cb)
     : encoder_(codec_name),
-      pkt_(av_packet_alloc(), pkt_deleter),
+      pkt_(av_packet_alloc(), &pkt_deleter),
       pkt_cb_(std::move(pkt_cb))
 {
   if (!pkt_) {

@@ -45,7 +45,7 @@ struct av_streamer {
                    ar, ChannelLayout{ac}.get(), sample_fmt),
         audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar),
                     &av_audio_fifo_free),
-        audio_frame_(av_frame_alloc(), frame_deleter)
+        audio_frame_(av_frame_alloc(), &frame_deleter)
   {
     if (!audio_fifo_ || !audio_frame_) {
       throw std::runtime_error("error allocating objects");
@@ -133,13 +133,11 @@ struct av_streamer {
     }
   }
 
-  static constexpr auto frame_deleter = [](AVFrame* frame) { av_frame_free(&frame); };
-
   Muxer muxer_;
   EncodeHelper audio_encode_helper_;
   Resampler resampler_;
   std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
-  std::unique_ptr<AVFrame, decltype(frame_deleter)> audio_frame_;
+  std::unique_ptr<AVFrame, decltype(&frame_deleter)> audio_frame_;
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;
 };
