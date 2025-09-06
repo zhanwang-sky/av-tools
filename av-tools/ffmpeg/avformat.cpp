@@ -77,14 +77,6 @@ Muxer::Muxer(const char* url,
     goto err_exit;
   }
 
-  if (!(ctx_->oformat->flags & AVFMT_NOFILE)) {
-    rc = avio_open(&ctx_->pb, url, AVIO_FLAG_WRITE);
-    if (rc < 0) {
-      goto err_exit;
-    }
-    need_close_ = true;
-  }
-
   return;
 
 err_exit:
@@ -127,11 +119,21 @@ AVStream* Muxer::new_stream() {
 int Muxer::write_header(AVDictionary** opts) {
   int rc;
 
-  rc = avformat_write_header(ctx_, opts);
-  if (rc >= 0) {
-    need_trailer_ = true;
+  if (!ctx_->pb && !(ctx_->oformat->flags & AVFMT_NOFILE)) {
+    rc = avio_open(&ctx_->pb, ctx_->url, AVIO_FLAG_WRITE);
+    if (rc < 0) {
+      goto err_exit;
+    }
+    need_close_ = true;
   }
 
+  rc = avformat_write_header(ctx_, opts);
+  if (rc < 0) {
+    goto err_exit;
+  }
+  need_trailer_ = true;
+
+err_exit:
   return rc;
 }
 
