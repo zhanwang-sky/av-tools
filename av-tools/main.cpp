@@ -7,7 +7,7 @@
 
 #include <cmath>
 #include <iostream>
-#include "av_streamer.h"
+#include "av-tools/capi/av_streamer.h"
 
 using std::cout;
 using std::cerr;

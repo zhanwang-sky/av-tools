@@ -20,18 +20,15 @@ pkg_check_modules(FFMPEG REQUIRED
 )
 
 file(GLOB_RECURSE SOURCES
-	capi/*.cpp
-	ffmpeg/*.cpp
+	${PROJECT_NAME}/capi/*.cpp
+	${PROJECT_NAME}/ffmpeg/*.cpp
+	${PROJECT_NAME}/utils/*.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME avtools)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/capi
-	${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
-	${CMAKE_CURRENT_SOURCE_DIR}/utils
+	${CMAKE_SOURCE_DIR}
 	${FFMPEG_INCLUDE_DIRS}
 )
 
@@ -46,11 +43,20 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	${FFMPEG_LIBRARIES}
 )
 
-install(TARGETS ${PROJECT_NAME}
-	LIBRARY DESTINATION lib
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME avtools)
+
+install(
+	TARGETS ${PROJECT_NAME}
+	LIBRARY
+	DESTINATION lib
 )
 
-install(DIRECTORY capi/
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.h"
+install(
+	DIRECTORY ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/capi
+	DIRECTORY ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/ffmpeg
+	DIRECTORY ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/utils
+	DESTINATION include/${PROJECT_NAME}
+	FILES_MATCHING
+		PATTERN "*.h"
+		PATTERN "*.hpp"
 )

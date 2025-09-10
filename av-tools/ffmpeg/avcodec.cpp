@@ -8,8 +8,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
-
-#include "avcodec.hpp"
+#include "av-tools/ffmpeg/avcodec.hpp"
 
 using namespace av::ffmpeg;
 

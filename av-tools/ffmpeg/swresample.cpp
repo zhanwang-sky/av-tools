@@ -7,8 +7,7 @@
 
 #include <stdexcept>
 #include <string>
-
-#include "swresample.hpp"
+#include "av-tools/ffmpeg/swresample.hpp"
 
 using namespace av::ffmpeg;
 

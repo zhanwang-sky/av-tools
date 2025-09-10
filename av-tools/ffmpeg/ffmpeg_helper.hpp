@@ -11,9 +11,9 @@
 #include <memory>
 #include <span>
 #include <vector>
-#include "avcodec.hpp"
-#include "avformat.hpp"
-#include "swresample.hpp"
+#include "av-tools/ffmpeg/avcodec.hpp"
+#include "av-tools/ffmpeg/avformat.hpp"
+#include "av-tools/ffmpeg/swresample.hpp"
 
 namespace av {
 

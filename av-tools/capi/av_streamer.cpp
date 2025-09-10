@@ -8,9 +8,8 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
-#include "ffmpeg_helper.hpp"
-
-#include "av_streamer.h"
+#include "av-tools/capi/av_streamer.h"
+#include "av-tools/ffmpeg/ffmpeg_helper.hpp"
 
 using namespace av::ffmpeg;
 

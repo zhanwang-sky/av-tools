@@ -7,7 +7,7 @@
 
 #include <stdexcept>
 #include <utility>
-#include "ffmpeg_helper.hpp"
+#include "av-tools/ffmpeg/ffmpeg_helper.hpp"
 
 using namespace av::ffmpeg;
 
