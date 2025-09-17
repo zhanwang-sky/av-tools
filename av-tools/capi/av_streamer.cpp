@@ -35,24 +35,23 @@ struct av_streamer {
               enum AVCodecID acodec = AV_CODEC_ID_AAC,
               int64_t ab = 0,
               enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP)
-      : muxer_(url, "flv"),
+      : audio_frame_(av_frame_alloc(), &frame_deleter),
+        audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar), &av_audio_fifo_free),
+        resampler_(sample_rate, ChannelLayout{nb_channels}.get(), AV_SAMPLE_FMT_S16,
+                   ar, ChannelLayout{ac}.get(), sample_fmt),
         audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
                                        std::placeholders::_1)),
-        resampler_(sample_rate, ChannelLayout{nb_channels}.get(), AV_SAMPLE_FMT_S16,
-                   ar, ChannelLayout{ac}.get(), sample_fmt),
-        audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar),
-                    &av_audio_fifo_free),
-        audio_frame_(av_frame_alloc(), &frame_deleter)
+        muxer_(url, "flv")
   {
-    if (!audio_fifo_ || !audio_frame_) {
+    if (!audio_frame_ || !audio_fifo_) {
       throw std::runtime_error("error allocating objects");
     }
 
-    AVFormatContext* mux_ctx = muxer_.ctx();
     auto& audio_encoder = audio_encode_helper_.encoder_;
     AVCodecContext* audio_enc_ctx = audio_encoder.ctx();
+    AVFormatContext* mux_ctx = muxer_.ctx();
 
     // setup audio encoder
     audio_enc_ctx->bit_rate = ab;
@@ -132,11 +131,11 @@ struct av_streamer {
     }
   }
 
-  Muxer muxer_;
-  EncodeHelper audio_encode_helper_;
-  Resampler resampler_;
-  std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
   std::unique_ptr<AVFrame, decltype(&frame_deleter)> audio_frame_;
+  std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
+  Resampler resampler_;
+  EncodeHelper audio_encode_helper_;
+  Muxer muxer_;
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;
 };
