@@ -51,11 +51,8 @@ class RTMPStreamer {
     return true;
   }
 
-  bool write(const uint8_t* buf, int size) {
-    if (!RTMP_Write(r_.get(), reinterpret_cast<const char*>(buf), size)) {
-      return false;
-    }
-    return true;
+  int write(const uint8_t* buf, int size) {
+    return RTMP_Write(r_.get(), reinterpret_cast<const char*>(buf), size);
   }
 
  private:
