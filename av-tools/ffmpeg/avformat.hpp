@@ -20,9 +20,7 @@ class Demuxer {
   Demuxer(const Demuxer&) = delete;
   Demuxer& operator=(const Demuxer&) = delete;
 
-  Demuxer(const char* url,
-          const AVInputFormat* ifmt = nullptr,
-          AVDictionary** opts = nullptr);
+  Demuxer();
 
   Demuxer(Demuxer&& rhs) noexcept;
 
@@ -32,11 +30,17 @@ class Demuxer {
 
   inline AVFormatContext* ctx() { return ctx_; }
 
+  int open(const char* url,
+           const AVInputFormat* ifmt = nullptr,
+           AVDictionary** opts = nullptr);
+
+  int find_stream_info(AVDictionary** opts = nullptr);
+
   int read_frame(AVPacket* pkt);
 
- private:
-  void clean();
+  void close();
 
+ private:
   AVFormatContext* ctx_ = nullptr;
 };
 
@@ -45,9 +49,7 @@ class Muxer {
   Muxer(const Muxer&) = delete;
   Muxer& operator=(const Muxer&) = delete;
 
-  Muxer(const char* url,
-        const char* fmt_name = nullptr,
-        const AVOutputFormat* ofmt = nullptr);
+  Muxer();
 
   Muxer(Muxer&& rhs) noexcept;
 
@@ -57,6 +59,10 @@ class Muxer {
 
   inline AVFormatContext* ctx() { return ctx_; }
 
+  int open(const char* url,
+           const char* fmt_name = nullptr,
+           const AVOutputFormat* ofmt = nullptr);
+
   AVStream* new_stream();
 
   int write_header(AVDictionary** opts = nullptr);
@@ -65,9 +71,9 @@ class Muxer {
 
   int interleaved_write_frame(AVPacket* pkt);
 
- private:
-  void clean();
+  void close();
 
+ private:
   AVFormatContext* ctx_ = nullptr;
   bool need_close_ = false;
   bool need_trailer_ = false;

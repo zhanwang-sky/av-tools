@@ -26,7 +26,7 @@ class CodecBase {
 
   virtual ~CodecBase();
 
-  void open(AVDictionary** opts = nullptr);
+  int open(AVDictionary** opts = nullptr);
 
   inline const AVCodec* codec() const { return codec_; }
 
@@ -35,11 +35,10 @@ class CodecBase {
  protected:
   explicit CodecBase(const AVCodec* codec);
 
-  virtual void clean();
+  void close();
 
   const AVCodec* codec_ = nullptr;
   AVCodecContext* ctx_ = nullptr;
-  bool is_open_ = false;
 };
 
 class Decoder : public CodecBase {

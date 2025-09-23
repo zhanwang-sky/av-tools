@@ -42,8 +42,7 @@ struct av_streamer {
         audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
-                                       std::placeholders::_1)),
-        muxer_(url, "flv")
+                                       std::placeholders::_1))
   {
     if (!audio_frame_ || !audio_fifo_) {
       throw std::runtime_error("error allocating objects");

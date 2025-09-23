@@ -33,8 +33,8 @@ class Resampler {
   int resample(const uint8_t* const* in_samples_buf, int in_samples, AVAudioFifo* af);
 
  protected:
-  virtual void clean();
-  virtual void reset();
+  void clean();
+  void reset();
 
  private:
   int in_sample_rate_;

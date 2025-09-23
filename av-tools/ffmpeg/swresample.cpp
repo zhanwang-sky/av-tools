@@ -6,7 +6,6 @@
 //
 
 #include <stdexcept>
-#include <string>
 #include "av-tools/ffmpeg/swresample.hpp"
 
 using namespace av::ffmpeg;
@@ -18,17 +17,18 @@ Resampler::Resampler(int in_sample_rate, const AVChannelLayout& in_ch_layout, en
       in_sample_fmt_(in_sample_fmt),
       out_sample_fmt_(out_sample_fmt)
 {
-  int rc;
-  char err_msg[AV_ERROR_MAX_STRING_SIZE];
-  std::string err_str;
+  int rc = 0;
+  const char* err_msg = "";
 
   rc = av_channel_layout_copy(&in_ch_layout_, &in_ch_layout);
   if (rc < 0) {
+    err_msg = "Resampler: error copying ch_layout";
     goto err_exit;
   }
 
   rc = av_channel_layout_copy(&out_ch_layout_, &out_ch_layout);
   if (rc < 0) {
+    err_msg = "Resampler: error copying ch_layout";
     goto err_exit;
   }
 
@@ -37,11 +37,13 @@ Resampler::Resampler(int in_sample_rate, const AVChannelLayout& in_ch_layout, en
                            &in_ch_layout, in_sample_fmt, in_sample_rate,
                            0, nullptr);
   if (rc < 0) {
+    err_msg = "Resampler: error setting swr opts";
     goto err_exit;
   }
 
   rc = swr_init(swr_);
   if (rc < 0) {
+    err_msg = "Resampler: error initializing swr";
     goto err_exit;
   }
 
@@ -49,9 +51,7 @@ Resampler::Resampler(int in_sample_rate, const AVChannelLayout& in_ch_layout, en
 
 err_exit:
   clean();
-  av_strerror(rc, err_msg, sizeof(err_msg));
-  err_str.append("Resampler: ").append(err_msg);
-  throw std::runtime_error(err_str);
+  throw std::runtime_error(err_msg);
 }
 
 Resampler::Resampler(Resampler&& rhs) noexcept
@@ -93,8 +93,8 @@ Resampler::~Resampler() {
 }
 
 int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples, AVAudioFifo* af) {
-  int out_samples;
-  int rc;
+  int out_samples = 0;
+  int rc = 0;
 
   out_samples = swr_get_out_samples(swr_, in_samples);
   if (out_samples < 0) {
@@ -132,8 +132,7 @@ int Resampler::resample(const uint8_t* const* in_samples_buf, int in_samples, AV
 
   out_samples = swr_convert(swr_,
                             samples_buf_, samples_,
-                            const_cast<const uint8_t**>(in_samples_buf), in_samples);
-                            // XXX TODO: for latest ffmpeg, remove const_cast<>
+                            in_samples_buf, in_samples);
   if (out_samples < 0) {
     return out_samples;
   }
