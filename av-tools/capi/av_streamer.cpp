@@ -45,7 +45,11 @@ struct av_streamer {
                                        std::placeholders::_1))
   {
     if (!audio_frame_ || !audio_fifo_) {
-      throw std::runtime_error("error allocating objects");
+      throw std::runtime_error("av_streamer: Cannot allocate memory");
+    }
+
+    if (muxer_.open(url) < 0) {
+      throw std::runtime_error("av_streamer: error opening muxer");
     }
 
     auto& audio_encoder = audio_encode_helper_.encoder_;
