@@ -7,13 +7,16 @@
 
 #include <cmath>
 #include <iostream>
+#include <thread>
 #include "av-tools/capi/av_streamer.h"
 
 using std::cout;
 using std::cerr;
 using std::endl;
 
-#define SAMPLE_RATE 8000
+#define PI 3.14159265
+#define SAMPLE_RATE 16000
+#define CENT_FREQ 950
 int16_t audio_buf[SAMPLE_RATE];
 
 int main(int argc, char* argv[]) {
@@ -27,10 +30,27 @@ int main(int argc, char* argv[]) {
     cerr << "Fail to alloc av_streamer\n";
     exit(EXIT_FAILURE);
   }
-  if (av_streamer_write_audio(p_streamer, (uint8_t*) audio_buf, SAMPLE_RATE) < 0) {
-    cerr << "error writing audio";
+
+  double t = 0.0;
+  double p = 0.0;
+
+  for (;;) {
+    for (int i = 0; i != SAMPLE_RATE; ++i) {
+      double f = sin(2.0 * PI * (t / 4.5)) * 400.0 + CENT_FREQ;
+      audio_buf[i] = static_cast<int16_t>(sin(p) * INT16_MAX);
+      p += 2.0 * PI * f / SAMPLE_RATE;
+      t += 1.0 / SAMPLE_RATE;
+    }
+    if (av_streamer_write_audio(p_streamer, reinterpret_cast<const uint8_t*>(audio_buf), SAMPLE_RATE) < 0) {
+      break;
+    }
+    cout << "samples write\n";
+    std::this_thread::sleep_for(std::chrono::milliseconds(990));
   }
+
   av_streamer_free(p_streamer);
+
+  cout << "terminated\n";
 
   return 0;
 }

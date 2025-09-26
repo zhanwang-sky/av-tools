@@ -10,24 +10,57 @@
 #include <stdexcept>
 #include "av-tools/capi/av_streamer.h"
 #include "av-tools/ffmpeg/ffmpeg_helper.hpp"
+#include "av-tools/utils/rtmp_streamer.hpp"
 
 using namespace av::ffmpeg;
+using namespace av::utils;
+
+struct AVIOHelper {
+  AVIOHelper(const char* url)
+      : streamer_(url)
+  {
+    uint8_t* io_buf = (uint8_t*) av_malloc(io_buffer_size);
+    if (!io_buf) {
+      goto err_exit;
+    }
+
+    avio_ = avio_alloc_context(io_buf, io_buffer_size, 1, &streamer_,
+                               nullptr, url_write, nullptr);
+    if (!avio_) {
+      goto err_exit;
+    }
+
+    return;
+
+  err_exit:
+    av_freep(&io_buf);
+    throw std::runtime_error("AVIOHelper: Cannot allocate memory");
+  }
+
+  ~AVIOHelper() {
+    av_freep(&avio_->buffer);
+    avio_context_free(&avio_);
+  }
+
+  inline bool connect() { return streamer_.connect(); }
+
+  inline AVIOContext* ctx() { return avio_; }
+
+  static int url_write(void* opaque, const uint8_t *buf, int size) {
+    auto p_streamer = static_cast<RTMPStreamer*>(opaque);
+    int ret = p_streamer->write(buf, size);
+    if (!ret) {
+      return AVERROR_EOF;
+    }
+    return ret;
+  }
+
+  static constexpr int io_buffer_size = 32768;
+  RTMPStreamer streamer_;
+  AVIOContext* avio_ = nullptr;
+};
 
 struct av_streamer {
-  struct ChannelLayout {
-    ChannelLayout(int ac = 1) {
-      av_channel_layout_default(&layout_, ac);
-    }
-
-    ~ChannelLayout() {
-      av_channel_layout_uninit(&layout_);
-    }
-
-    inline const AVChannelLayout& get() const { return layout_; }
-
-    AVChannelLayout layout_{};
-  };
-
  public:
   av_streamer(int sample_rate, int nb_channels, const char* url,
               int ar = 16000,
@@ -37,24 +70,32 @@ struct av_streamer {
               enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP)
       : audio_frame_(av_frame_alloc(), &frame_deleter),
         audio_fifo_(av_audio_fifo_alloc(sample_fmt, ac, ar), &av_audio_fifo_free),
-        resampler_(sample_rate, ChannelLayout{nb_channels}.get(), AV_SAMPLE_FMT_S16,
-                   ar, ChannelLayout{ac}.get(), sample_fmt),
+        resampler_(sample_rate, ChannelLayoutHelper{nb_channels}.get(), AV_SAMPLE_FMT_S16,
+                   ar, ChannelLayoutHelper{ac}.get(), sample_fmt),
         audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
-                                       std::placeholders::_1))
+                                       std::placeholders::_1)),
+        io_helper_(url)
   {
     if (!audio_frame_ || !audio_fifo_) {
       throw std::runtime_error("av_streamer: Cannot allocate memory");
     }
 
-    if (muxer_.open(url) < 0) {
-      throw std::runtime_error("av_streamer: error opening muxer");
-    }
-
     auto& audio_encoder = audio_encode_helper_.encoder_;
     AVCodecContext* audio_enc_ctx = audio_encoder.ctx();
     AVFormatContext* mux_ctx = muxer_.ctx();
+
+    // connect to rtmp server
+    if (!io_helper_.connect()) {
+      throw std::runtime_error("av_streamer: error connecting to rtmp server");
+    }
+
+    // setup muxer
+    mux_ctx->pb = io_helper_.ctx();
+    if (muxer_.open(url, "flv") < 0) {
+      throw std::runtime_error("av_streamer: error opening muxer");
+    }
 
     // setup audio encoder
     audio_enc_ctx->bit_rate = ab;
@@ -77,6 +118,7 @@ struct av_streamer {
     }
     audio_stream_->time_base = av_make_q(1, 1000); // 1ms for flv
 
+    // write flv header
     if (muxer_.write_header() < 0) {
       throw std::runtime_error("av_streamer: error writing header");
     }
@@ -138,6 +180,7 @@ struct av_streamer {
   std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
   Resampler resampler_;
   EncodeHelper audio_encode_helper_;
+  AVIOHelper io_helper_;
   Muxer muxer_;
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;

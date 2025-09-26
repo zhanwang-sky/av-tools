@@ -21,6 +21,20 @@ inline void frame_deleter(AVFrame* frame) { av_frame_free(&frame); }
 
 inline void pkt_deleter(AVPacket* pkt) { av_packet_free(&pkt); }
 
+struct ChannelLayoutHelper {
+  ChannelLayoutHelper(int ac = 1) {
+    av_channel_layout_default(&layout_, ac);
+  }
+
+  ~ChannelLayoutHelper() {
+    av_channel_layout_uninit(&layout_);
+  }
+
+  inline const AVChannelLayout& get() const { return layout_; }
+
+  AVChannelLayout layout_{};
+};
+
 struct EncodeHelper {
   using packet_callback = std::function<void(AVPacket*)>;
 
