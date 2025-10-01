@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		D935A1E12DB79A0800F75AFD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D935A1E02DB79A0800F75AFD /* CoreVideo.framework */; };
-		D936FBD22E4AE96C00CE185B /* libssl.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D936FBD02E4AE96C00CE185B /* libssl.3.dylib */; };
-		D936FBD42E4AE96C00CE185B /* libcrypto.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D936FBD12E4AE96C00CE185B /* libcrypto.3.dylib */; };
 		D944B5F82DAF8A4A00ECACAB /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */; };
 		D952E6CD2DAF4E2B00C95FB1 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */; };
+		D9883A442E8D193400DEFDDA /* libcrypto.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9883A422E8D193400DEFDDA /* libcrypto.3.dylib */; };
+		D9883A462E8D193400DEFDDA /* libssl.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9883A432E8D193400DEFDDA /* libssl.3.dylib */; };
 		D9B71B862E7A882000CD1285 /* librtmp.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B71B852E7A882000CD1285 /* librtmp.1.dylib */; };
 		D9D35A042E6AB9FB009B673C /* libavformat.62.3.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9D359FD2E6AB9FB009B673C /* libavformat.62.3.100.dylib */; };
 		D9D35A062E6AB9FB009B673C /* libavdevice.62.1.100.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D9D359FE2E6AB9FB009B673C /* libavdevice.62.1.100.dylib */; };
@@ -37,11 +37,11 @@
 
 /* Begin PBXFileReference section */
 		D935A1E02DB79A0800F75AFD /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
-		D936FBD02E4AE96C00CE185B /* libssl.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.2/lib/libssl.3.dylib"; sourceTree = "<group>"; };
-		D936FBD12E4AE96C00CE185B /* libcrypto.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.2/lib/libcrypto.3.dylib"; sourceTree = "<group>"; };
 		D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		D952E6CC2DAF4E2B00C95FB1 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		D9853C872D55ADF800D4BBEA /* av-tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "av-tools"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9883A422E8D193400DEFDDA /* libcrypto.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.3/lib/libcrypto.3.dylib"; sourceTree = "<group>"; };
+		D9883A432E8D193400DEFDDA /* libssl.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.3.dylib; path = "/opt/homebrew/Cellar/openssl@3/3.5.3/lib/libssl.3.dylib"; sourceTree = "<group>"; };
 		D9B71B852E7A882000CD1285 /* librtmp.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = librtmp.1.dylib; path = "/opt/homebrew/Cellar/rtmpdump/2.4-20151223_3/lib/librtmp.1.dylib"; sourceTree = "<group>"; };
 		D9D359FD2E6AB9FB009B673C /* libavformat.62.3.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavformat.62.3.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/8.0_1/lib/libavformat.62.3.100.dylib; sourceTree = "<group>"; };
 		D9D359FE2E6AB9FB009B673C /* libavdevice.62.1.100.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libavdevice.62.1.100.dylib; path = /opt/homebrew/Cellar/ffmpeg/8.0_1/lib/libavdevice.62.1.100.dylib; sourceTree = "<group>"; };
@@ -76,8 +76,8 @@
 				D9D35A0A2E6AB9FB009B673C /* libavutil.60.8.100.dylib in Frameworks */,
 				D9D35A102E6AB9FB009B673C /* libswresample.6.1.100.dylib in Frameworks */,
 				D9D35A0E2E6AB9FB009B673C /* libswscale.9.1.100.dylib in Frameworks */,
-				D936FBD42E4AE96C00CE185B /* libcrypto.3.dylib in Frameworks */,
-				D936FBD22E4AE96C00CE185B /* libssl.3.dylib in Frameworks */,
+				D9883A442E8D193400DEFDDA /* libcrypto.3.dylib in Frameworks */,
+				D9883A462E8D193400DEFDDA /* libssl.3.dylib in Frameworks */,
 				D9B71B862E7A882000CD1285 /* librtmp.1.dylib in Frameworks */,
 				D9E274CA2DD0A50000E5887A /* libwebrtc.a in Frameworks */,
 			);
@@ -106,6 +106,8 @@
 		D9EAD9922D55EF9200F9C0C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D9883A422E8D193400DEFDDA /* libcrypto.3.dylib */,
+				D9883A432E8D193400DEFDDA /* libssl.3.dylib */,
 				D9B71B852E7A882000CD1285 /* librtmp.1.dylib */,
 				D9D35A012E6AB9FB009B673C /* libavcodec.62.11.100.dylib */,
 				D9D359FE2E6AB9FB009B673C /* libavdevice.62.1.100.dylib */,
@@ -114,8 +116,6 @@
 				D9D35A002E6AB9FB009B673C /* libavutil.60.8.100.dylib */,
 				D9D35A032E6AB9FB009B673C /* libswresample.6.1.100.dylib */,
 				D9D35A022E6AB9FB009B673C /* libswscale.9.1.100.dylib */,
-				D936FBD12E4AE96C00CE185B /* libcrypto.3.dylib */,
-				D936FBD02E4AE96C00CE185B /* libssl.3.dylib */,
 				D9E274C92DD0A50000E5887A /* libwebrtc.a */,
 				D935A1E02DB79A0800F75AFD /* CoreVideo.framework */,
 				D944B5F72DAF8A4A00ECACAB /* CoreMedia.framework */,
@@ -318,13 +318,13 @@
 					"$(SRCROOT)",
 					/opt/homebrew/Cellar/boost/1.89.0/include,
 					/opt/homebrew/Cellar/ffmpeg/8.0_1/include,
-					"/opt/homebrew/Cellar/openssl@3/3.5.2/include",
+					"/opt/homebrew/Cellar/openssl@3/3.5.3/include",
 					"/opt/homebrew/Cellar/rtmpdump/2.4-20151223_3/include",
 					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/8.0_1/lib,
-					"/opt/homebrew/Cellar/openssl@3/3.5.2/lib",
+					"/opt/homebrew/Cellar/openssl@3/3.5.3/lib",
 					"/opt/homebrew/Cellar/rtmpdump/2.4-20151223_3/lib",
 					/opt/webrtc/src/out/Default/obj,
 				);
@@ -342,13 +342,13 @@
 					"$(SRCROOT)",
 					/opt/homebrew/Cellar/boost/1.89.0/include,
 					/opt/homebrew/Cellar/ffmpeg/8.0_1/include,
-					"/opt/homebrew/Cellar/openssl@3/3.5.2/include",
+					"/opt/homebrew/Cellar/openssl@3/3.5.3/include",
 					"/opt/homebrew/Cellar/rtmpdump/2.4-20151223_3/include",
 					/opt/webrtc/src/third_party/libyuv/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/opt/homebrew/Cellar/ffmpeg/8.0_1/lib,
-					"/opt/homebrew/Cellar/openssl@3/3.5.2/lib",
+					"/opt/homebrew/Cellar/openssl@3/3.5.3/lib",
 					"/opt/homebrew/Cellar/rtmpdump/2.4-20151223_3/lib",
 					/opt/webrtc/src/out/Default/obj,
 				);
