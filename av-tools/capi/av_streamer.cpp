@@ -82,20 +82,20 @@ struct av_streamer {
       throw std::runtime_error("av_streamer: Cannot allocate memory");
     }
 
-    auto& audio_encoder = audio_encode_helper_.encoder_;
-    AVCodecContext* audio_enc_ctx = audio_encoder.ctx();
-    AVFormatContext* mux_ctx = muxer_.ctx();
-
     // connect to rtmp server
     if (!io_helper_.connect()) {
       throw std::runtime_error("av_streamer: error connecting to rtmp server");
     }
 
     // setup muxer
-    mux_ctx->pb = io_helper_.ctx();
+    muxer_.set_avio(io_helper_.ctx());
     if (muxer_.open(url, "flv") < 0) {
       throw std::runtime_error("av_streamer: error opening muxer");
     }
+
+    auto& audio_encoder = audio_encode_helper_.encoder_;
+    AVCodecContext* audio_enc_ctx = audio_encoder.ctx();
+    AVFormatContext* mux_ctx = muxer_.ctx();
 
     // setup audio encoder
     audio_enc_ctx->bit_rate = ab;

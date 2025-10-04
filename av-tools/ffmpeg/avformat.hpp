@@ -28,6 +28,8 @@ class Demuxer {
 
   virtual ~Demuxer();
 
+  inline void set_avio(AVIOContext* avio) { ctx_->pb = avio; }
+
   inline AVFormatContext* ctx() { return ctx_; }
 
   int open(const char* url,
@@ -38,6 +40,7 @@ class Demuxer {
 
   int read_frame(AVPacket* pkt);
 
+ protected:
   void close();
 
  private:
@@ -49,13 +52,15 @@ class Muxer {
   Muxer(const Muxer&) = delete;
   Muxer& operator=(const Muxer&) = delete;
 
-  Muxer();
+  Muxer() = default;
 
   Muxer(Muxer&& rhs) noexcept;
 
   Muxer& operator=(Muxer&& rhs) noexcept;
 
   virtual ~Muxer();
+
+  inline void set_avio(AVIOContext* avio) { avio_ = avio; }
 
   inline AVFormatContext* ctx() { return ctx_; }
 
@@ -71,9 +76,11 @@ class Muxer {
 
   int interleaved_write_frame(AVPacket* pkt);
 
+ protected:
   void close();
 
  private:
+  AVIOContext* avio_ = nullptr;
   AVFormatContext* ctx_ = nullptr;
   bool need_close_ = false;
   bool need_trailer_ = false;

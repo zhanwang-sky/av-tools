@@ -54,18 +54,13 @@ void Demuxer::close() {
   avformat_close_input(&ctx_);
 }
 
-Muxer::Muxer()
-{
-  if (!(ctx_ = avformat_alloc_context())) {
-    throw std::runtime_error("Muxer: error allocating format context");
-  }
-}
-
 Muxer::Muxer(Muxer&& rhs) noexcept
-    : ctx_(rhs.ctx_),
+    : avio_(rhs.avio_),
+      ctx_(rhs.ctx_),
       need_close_(rhs.need_close_),
       need_trailer_(rhs.need_trailer_)
 {
+  rhs.avio_ = nullptr;
   rhs.ctx_ = nullptr;
   rhs.need_close_ = false;
   rhs.need_trailer_ = false;
@@ -75,10 +70,12 @@ Muxer& Muxer::operator=(Muxer&& rhs) noexcept {
   if (this != &rhs) {
     close();
 
+    avio_ = rhs.avio_;
     ctx_ = rhs.ctx_;
     need_close_ = rhs.need_close_;
     need_trailer_ = rhs.need_trailer_;
 
+    rhs.avio_ = nullptr;
     rhs.ctx_ = nullptr;
     rhs.need_close_ = false;
     rhs.need_trailer_ = false;
@@ -94,30 +91,23 @@ Muxer::~Muxer() {
 int Muxer::open(const char* url,
                 const char* fmt_name,
                 const AVOutputFormat* ofmt) {
-  if (!ofmt) {
-    if (fmt_name) {
-      ofmt = av_guess_format(fmt_name, nullptr, nullptr);
+  int rc = 0;
+
+  rc = avformat_alloc_output_context2(&ctx_, ofmt, fmt_name, url);
+  if (rc < 0) {
+    return rc;
+  }
+
+  if (!(ctx_->oformat->flags & AVFMT_NOFILE)) {
+    if (avio_) {
+      ctx_->pb = avio_;
     } else {
-      ofmt = av_guess_format(nullptr, url, nullptr);
+      rc = avio_open(&ctx_->pb, url, AVIO_FLAG_WRITE);
+      if (rc < 0) {
+        return rc;
+      }
+      need_close_ = true;
     }
-    if (!ofmt) {
-      return AVERROR(EINVAL);
-    }
-  }
-  ctx_->oformat = ofmt;
-
-  if (url) {
-    if (!(ctx_->url = av_strdup(url))) {
-      return AVERROR(ENOMEM);
-    }
-  }
-
-  if (!ctx_->pb && !(ctx_->oformat->flags & AVFMT_NOFILE)) {
-    int rc = avio_open(&ctx_->pb, url, AVIO_FLAG_WRITE);
-    if (rc < 0) {
-      return rc;
-    }
-    need_close_ = true;
   }
 
   return 0;
@@ -144,6 +134,7 @@ int Muxer::interleaved_write_frame(AVPacket* pkt) {
 }
 
 void Muxer::close() {
+  avio_ = nullptr;
   if (ctx_) {
     if (need_trailer_) {
       av_write_trailer(ctx_);
