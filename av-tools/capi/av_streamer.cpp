@@ -82,14 +82,20 @@ struct av_streamer {
       throw std::runtime_error("av_streamer: Cannot allocate memory");
     }
 
-    // connect to rtmp server
-    if (!io_helper_.connect()) {
-      throw std::runtime_error("av_streamer: error connecting to rtmp server");
+    DictHelper tcp_opts;
+    if ((av_dict_set(&tcp_opts.get(), "tcp_timeout", "2500000", 0) < 0) ||
+        (av_dict_set(&tcp_opts.get(), "tcp_nodelay", "1", 0) < 0)) {
+      throw std::runtime_error("av_streamer: error setting tcp opts");
     }
 
+    // connect to rtmp server
+//    if (!io_helper_.connect()) {
+//      throw std::runtime_error("av_streamer: error connecting to rtmp server");
+//    }
+
     // setup muxer
-    muxer_.set_avio(io_helper_.ctx());
-    if (muxer_.open(url, "flv") < 0) {
+//    muxer_.set_avio(io_helper_.ctx());
+    if (muxer_.open(url, "flv", nullptr, &tcp_opts.get()) < 0) {
       throw std::runtime_error("av_streamer: error opening muxer");
     }
 

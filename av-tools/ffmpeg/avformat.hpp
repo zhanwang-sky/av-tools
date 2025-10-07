@@ -66,7 +66,8 @@ class Muxer {
 
   int open(const char* url,
            const char* fmt_name = nullptr,
-           const AVOutputFormat* ofmt = nullptr);
+           const AVOutputFormat* ofmt = nullptr,
+           AVDictionary** opts = nullptr);
 
   AVStream* new_stream();
 

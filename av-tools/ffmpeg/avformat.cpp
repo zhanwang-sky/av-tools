@@ -90,7 +90,8 @@ Muxer::~Muxer() {
 
 int Muxer::open(const char* url,
                 const char* fmt_name,
-                const AVOutputFormat* ofmt) {
+                const AVOutputFormat* ofmt,
+                AVDictionary** opts) {
   int rc = 0;
 
   rc = avformat_alloc_output_context2(&ctx_, ofmt, fmt_name, url);
@@ -102,7 +103,7 @@ int Muxer::open(const char* url,
     if (avio_) {
       ctx_->pb = avio_;
     } else {
-      rc = avio_open(&ctx_->pb, url, AVIO_FLAG_WRITE);
+      rc = avio_open2(&ctx_->pb, url, AVIO_FLAG_WRITE, NULL, opts);
       if (rc < 0) {
         return rc;
       }

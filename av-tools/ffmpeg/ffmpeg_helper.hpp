@@ -13,6 +13,10 @@
 #include "av-tools/ffmpeg/avformat.hpp"
 #include "av-tools/ffmpeg/swresample.hpp"
 
+extern "C" {
+#include <libavutil/dict.h>
+}
+
 namespace av {
 
 namespace ffmpeg {
@@ -20,6 +24,18 @@ namespace ffmpeg {
 inline void frame_deleter(AVFrame* frame) { av_frame_free(&frame); }
 
 inline void pkt_deleter(AVPacket* pkt) { av_packet_free(&pkt); }
+
+struct DictHelper {
+  DictHelper() = default;
+
+  ~DictHelper() {
+    av_dict_free(&dict_);
+  }
+
+  inline AVDictionary*& get() { return dict_; }
+
+  AVDictionary* dict_ = nullptr;
+};
 
 struct ChannelLayoutHelper {
   ChannelLayoutHelper(int ac = 1) {
