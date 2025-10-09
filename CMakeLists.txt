@@ -6,14 +6,19 @@ project(av-tools LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(RTMPDUMP_PATH "/opt/rtmpdump" CACHE PATH "Path to custom RTMPDump installation")
-set(FFMPEG_PATH "/opt/ffmpeg" CACHE PATH "Path to custom FFmpeg installation")
-
 set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
 set(BUILD_SHARED_LIBS ON)
 
 find_package(Boost REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED
+	libavcodec
+	libavformat
+	libavutil
+	libswresample
+)
+pkg_check_modules(RTMPDUMP REQUIRED librtmp)
 
 file(GLOB_RECURSE SOURCES
 	${PROJECT_NAME}/capi/*.cpp
@@ -25,21 +30,21 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_SOURCE_DIR}
-	${RTMPDUMP_PATH}/include
-	${FFMPEG_PATH}/include
+	${FFMPEG_INCLUDE_DIRS}
+	${RTMPDUMP_INCLUDE_DIRS}
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
-	${RTMPDUMP_PATH}/lib
-	${FFMPEG_PATH}/lib
+	${FFMPEG_LIBRARY_DIRS}
+	${RTMPDUMP_LIBRARY_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	Boost::boost
 	OpenSSL::SSL
 	OpenSSL::Crypto
-	rtmp
-	avcodec avformat avutil swresample
+	${FFMPEG_LIBRARIES}
+	${RTMPDUMP_LIBRARIES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME avtools)
