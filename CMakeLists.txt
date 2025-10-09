@@ -18,6 +18,7 @@ pkg_check_modules(FFMPEG REQUIRED
 	libavutil
 	libswresample
 )
+pkg_check_modules(RTMPDUMP REQUIRED librtmp)
 
 file(GLOB_RECURSE SOURCES
 	${PROJECT_NAME}/capi/*.cpp
@@ -30,10 +31,12 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_SOURCE_DIR}
 	${FFMPEG_INCLUDE_DIRS}
+	${RTMPDUMP_INCLUDE_DIRS}
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
 	${FFMPEG_LIBRARY_DIRS}
+	${RTMPDUMP_LIBRARY_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -41,6 +44,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	OpenSSL::SSL
 	OpenSSL::Crypto
 	${FFMPEG_LIBRARIES}
+	${RTMPDUMP_LIBRARIES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME avtools)
