@@ -20,8 +20,8 @@
                     withVideoWidth:(int)videoWidth
                    withVideoHeight:(int)videoHeight
                      withFrameRate:(int)frameRate
-                       withAudioCb:(MediaCapture::on_audio_cb &&)audioCb
-                       withVideoCb:(MediaCapture::on_video_cb &&)videoCb;
+                       withAudioCb:(MediaCapture::audio_callback &&)audioCb
+                       withVideoCb:(MediaCapture::video_callback &&)videoCb;
 
 - (void)start;
 
@@ -35,8 +35,8 @@
   AVCaptureVideoDataOutput *_videoOutput;
   dispatch_queue_t _audioDispatchQueue;
   dispatch_queue_t _videoDispatchQueue;
-  MediaCapture::on_audio_cb _audioCb;
-  MediaCapture::on_video_cb _videoCb;
+  MediaCapture::audio_callback _audioCb;
+  MediaCapture::video_callback _videoCb;
 }
 
 - (instancetype)initWithChannelNum:(int)channelNum
@@ -44,8 +44,8 @@
                     withVideoWidth:(int)videoWidth
                    withVideoHeight:(int)videoHeight
                      withFrameRate:(int)frameRate
-                       withAudioCb:(MediaCapture::on_audio_cb &&)audioCb
-                       withVideoCb:(MediaCapture::on_video_cb &&)videoCb {
+                       withAudioCb:(MediaCapture::audio_callback &&)audioCb
+                       withVideoCb:(MediaCapture::video_callback &&)videoCb {
   self = [super init];
 
   if (self) {
@@ -212,14 +212,14 @@ struct MediaCapture::Impl final {
   __strong MediaCaptureImpl* instance;
 
   Impl(int nb_channels, int sample_rate, int width, int height, int frame_rate,
-       on_audio_cb&& on_audio, on_video_cb&& on_video)
+       audio_callback&& audio_cb, video_callback&& video_cb)
       : instance([[MediaCaptureImpl alloc] initWithChannelNum:nb_channels
                                                withSampleRate:sample_rate
                                                withVideoWidth:width
                                               withVideoHeight:height
                                                 withFrameRate:frame_rate
-                                                  withAudioCb:(std::move(on_audio))
-                                                  withVideoCb:(std::move(on_video))]) {
+                                                  withAudioCb:(std::move(audio_cb))
+                                                  withVideoCb:(std::move(video_cb))]) {
     if (!instance) {
       throw std::runtime_error("MediaCapture::Impl: fail to init MediaCaptureImpl");
     }
@@ -230,13 +230,13 @@ struct MediaCapture::Impl final {
 
 MediaCapture::MediaCapture(int nb_channels, int sample_rate,
                            int width, int height, int frame_rate,
-                           on_audio_cb&& on_audio, on_video_cb&& on_video)
+                           audio_callback&& audio_cb, video_callback&& video_cb)
     : impl_(std::make_unique<Impl>(nb_channels, sample_rate,
                                    width, height, frame_rate,
-                                   std::move(on_audio),
-                                   std::move(on_video))) { }
+                                   std::move(audio_cb),
+                                   std::move(video_cb))) { }
 
-MediaCapture::~MediaCapture() = default;
+MediaCapture::~MediaCapture() { }
 
 void MediaCapture::start() {
   [impl_->instance start];

@@ -12,12 +12,12 @@
 
 class MediaCapture final {
  public:
-  using on_audio_cb = std::function<void(unsigned char*, int)>; // S16
-  using on_video_cb = std::function<void(unsigned char* planes[], int strides[])>; // I420
+  using audio_callback = std::function<void(unsigned char*, int)>; // S16
+  using video_callback = std::function<void(unsigned char* planes[], int strides[])>; // I420
 
   MediaCapture(int nb_channels, int sample_rate,
                int width, int height, int frame_rate,
-               on_audio_cb&& on_audio, on_video_cb&& on_video);
+               audio_callback&& audio_cb, video_callback&& video_cb);
 
   ~MediaCapture();
 
