@@ -18,7 +18,7 @@ Resampler::Resampler(int in_sample_rate, const AVChannelLayout& in_ch_layout, en
       out_sample_fmt_(out_sample_fmt)
 {
   int rc = 0;
-  const char* err_msg = "";
+  const char* err_msg = nullptr;
 
   rc = av_channel_layout_copy(&in_ch_layout_, &in_ch_layout);
   if (rc < 0) {

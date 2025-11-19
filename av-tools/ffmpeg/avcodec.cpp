@@ -28,6 +28,7 @@ CodecBase& CodecBase::operator=(CodecBase&& rhs) noexcept {
     rhs.codec_ = nullptr;
     rhs.ctx_ = nullptr;
   }
+
   return *this;
 }
 
@@ -42,16 +43,17 @@ int CodecBase::open(AVDictionary** opts) {
 CodecBase::CodecBase(const AVCodec* codec)
 {
   if (!(codec_ = codec)) {
-    throw std::runtime_error("CodecBase: Codec not found");
+    throw std::runtime_error("CodecBase: invalid argument");
   }
 
   if (!(ctx_ = avcodec_alloc_context3(codec))) {
-    throw std::runtime_error("CodecBase: Cannot allocate memory");
+    throw std::runtime_error("CodecBase: error allocating codec context");
   }
 }
 
 void CodecBase::close() {
   avcodec_free_context(&ctx_);
+  codec_ = nullptr;
 }
 
 Decoder::Decoder(enum AVCodecID codec_id)
