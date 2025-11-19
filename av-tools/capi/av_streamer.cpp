@@ -75,8 +75,7 @@ struct av_streamer {
         audio_encode_helper_(acodec,
                              std::bind(&av_streamer::on_audio_pkt,
                                        this,
-                                       std::placeholders::_1)),
-        io_helper_(url)
+                                       std::placeholders::_1))
   {
     if (!audio_frame_ || !audio_fifo_) {
       throw std::runtime_error("av_streamer: Cannot allocate memory");
@@ -88,13 +87,7 @@ struct av_streamer {
       throw std::runtime_error("av_streamer: error setting tcp opts");
     }
 
-    // connect to rtmp server
-//    if (!io_helper_.connect()) {
-//      throw std::runtime_error("av_streamer: error connecting to rtmp server");
-//    }
-
     // setup muxer
-//    muxer_.set_avio(io_helper_.ctx());
     if (muxer_.open(url, "flv", nullptr, &tcp_opts.get()) < 0) {
       throw std::runtime_error("av_streamer: error opening muxer");
     }
@@ -186,7 +179,6 @@ struct av_streamer {
   std::unique_ptr<AVAudioFifo, decltype(&av_audio_fifo_free)> audio_fifo_;
   Resampler resampler_;
   EncodeHelper audio_encode_helper_;
-  AVIOHelper io_helper_;
   Muxer muxer_;
   AVStream* audio_stream_ = nullptr;
   int64_t audio_pts_ = 0;
